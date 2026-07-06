@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Dashboard de Tamizaje de Alcohol y Otras Drogas en APS | DIVAP - MINSAL</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --azul-oscuro:#25306B;
+    --azul:#005F9E;
+    --acento:#6B2D8C;
+    --acento-suave:#8E4FB0;
+    --rojo:#C0392B;
+    --ambar:#C9962B;
+    --verde:#1E8074;
+    --gris-fondo:#F3F4F8;
+    --gris-borde:#D9DCE6;
+    --gris-texto:#4A4E63;
+    --blanco:#FFFFFF;
+    --radio:10px;
+    --sombra:0 2px 10px rgba(37,48,107,0.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--gris-fondo);
+    color:#1B1F3B;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+
+  /* ---------- HEADER ---------- */
+  header.app-header{
+    background:linear-gradient(135deg,var(--azul-oscuro) 0%, #1B2354 100%);
+    color:#fff;
+    padding:14px 20px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    position:sticky;
+    top:0;
+    z-index:1000;
+    box-shadow:0 2px 12px rgba(0,0,0,0.18);
+  }
+  header.app-header .logo-wrap{
+    width:52px;height:52px;flex:0 0 auto;
+    background:#fff;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+  }
+  header.app-header .logo-wrap img{width:100%;height:100%;object-fit:contain;}
+  header.app-header .titulos{flex:1;min-width:0;}
+  header.app-header h1{
+    font-size:17px;margin:0;line-height:1.25;font-weight:700;
+  }
+  header.app-header p{
+    margin:2px 0 0;font-size:12.5px;color:#C7CCEE;font-weight:400;
+  }
+  header.app-header .badge-acento{
+    background:var(--acento);
+    color:#fff;font-size:11px;font-weight:600;
+    padding:4px 10px;border-radius:20px;white-space:nowrap;
+  }
+
+  /* ---------- FILTROS ---------- */
+  .filtros-bar{
+    background:#fff;
+    border-bottom:1px solid var(--gris-borde);
+    padding:12px 20px;
+    position:sticky;
+    top:80px;
+    z-index:900;
+    box-shadow:var(--sombra);
+  }
+  .filtros-grid{
+    display:grid;
+    grid-template-columns:repeat(6, minmax(120px,1fr));
+    gap:10px;
+    max-width:1400px;
+    margin:0 auto;
+  }
+  .filtro-item label{
+    display:block;font-size:11px;font-weight:700;color:var(--azul-oscuro);
+    text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;
+  }
+  .filtro-item select{
+    width:100%;padding:8px 10px;border:1px solid var(--gris-borde);
+    border-radius:8px;font-size:13px;background:#fbfbfd;color:#1B1F3B;
+    appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%234A4E63'/></svg>");
+    background-repeat:no-repeat;background-position:right 10px center;
+  }
+  .filtro-item select:focus{outline:2px solid var(--acento);outline-offset:1px;}
+  .filtros-acciones{
+    max-width:1400px;margin:10px auto 0;display:flex;justify-content:space-between;align-items:center;
+    gap:8px;flex-wrap:wrap;
+  }
+  .chip-contexto{
+    font-size:12px;color:var(--gris-texto);background:var(--gris-fondo);
+    padding:5px 12px;border-radius:16px;border:1px solid var(--gris-borde);
+  }
+  .btn-reset{
+    background:none;border:1px solid var(--acento);color:var(--acento);
+    padding:6px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;
+  }
+  .btn-reset:hover{background:var(--acento);color:#fff;}
+
+  /* ---------- CONTENIDO ---------- */
+  main{max-width:1400px;margin:0 auto;padding:20px;}
+
+  .kpi-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;
+  }
+  .kpi-card{
+    background:#fff;border-radius:var(--radio);padding:16px 18px;box-shadow:var(--sombra);
+    border-left:5px solid var(--azul);
+  }
+  .kpi-card.acento{border-left-color:var(--acento);}
+  .kpi-card.rojo{border-left-color:var(--rojo);}
+  .kpi-card.verde{border-left-color:var(--verde);}
+  .kpi-card .kpi-label{font-size:11.5px;font-weight:700;color:var(--gris-texto);text-transform:uppercase;letter-spacing:.02em;}
+  .kpi-card .kpi-valor{font-size:28px;font-weight:800;color:var(--azul-oscuro);margin-top:6px;line-height:1;}
+  .kpi-card .kpi-sub{font-size:11.5px;color:#8A8FA3;margin-top:6px;}
+
+  .secciones-tabs{
+    display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--gris-borde);flex-wrap:wrap;
+  }
+  .tab-btn{
+    background:none;border:none;padding:10px 16px;font-size:13.5px;font-weight:700;
+    color:var(--gris-texto);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;
+  }
+  .tab-btn.activo{color:var(--acento);border-bottom-color:var(--acento);}
+
+  .vista{display:none;}
+  .vista.activa{display:block;}
+
+  .charts-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:16px;margin-bottom:18px;
+  }
+  .chart-card{
+    background:#fff;border-radius:var(--radio);padding:16px 18px 10px;box-shadow:var(--sombra);
+  }
+  .chart-card .chart-head{
+    display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;
+  }
+  .chart-card h3{margin:0;font-size:14.5px;color:var(--azul-oscuro);font-weight:700;}
+  .chart-card .chart-sub{font-size:11.5px;color:#8A8FA3;margin:2px 0 8px;}
+  .btn-png{
+    flex:0 0 auto;background:var(--azul-oscuro);color:#fff;border:none;border-radius:7px;
+    font-size:11px;font-weight:600;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;
+    white-space:nowrap;
+  }
+  .btn-png:hover{background:var(--acento);}
+  .chart-canvas-wrap{position:relative;height:280px;}
+
+  #mapa{height:520px;border-radius:var(--radio);box-shadow:var(--sombra);overflow:hidden;}
+  .mapa-leyenda{
+    background:#fff;padding:10px 14px;border-radius:8px;box-shadow:var(--sombra);
+    font-size:11.5px;color:var(--gris-texto);margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;
+  }
+  .mapa-leyenda span{display:inline-flex;align-items:center;gap:6px;}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+
+  /* ---------- FICHA TERRITORIO ---------- */
+  .ficha-selector{
+    background:#fff;border-radius:var(--radio);padding:16px;box-shadow:var(--sombra);margin-bottom:16px;
+    display:grid;grid-template-columns:160px 1fr auto;gap:10px;align-items:end;
+  }
+  .ficha-header{
+    background:linear-gradient(135deg,var(--azul-oscuro),var(--acento));color:#fff;
+    border-radius:var(--radio);padding:18px 20px;margin-bottom:16px;
+  }
+  .ficha-header h2{margin:0 0 4px;font-size:19px;}
+  .ficha-header p{margin:0;font-size:12.5px;color:#E4D9F0;}
+  .ficha-header .btn-png{background:rgba(255,255,255,.18);}
+  .ficha-header .btn-png:hover{background:rgba(255,255,255,.32);}
+  .ficha-cabecera-flex{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+
+  footer.app-footer{
+    text-align:center;padding:24px 16px 40px;color:#8A8FA3;font-size:11.5px;
+  }
+  footer.app-footer strong{color:var(--azul-oscuro);}
+
+  .estado-carga, .estado-vacio{
+    text-align:center;padding:60px 20px;color:#8A8FA3;font-size:14px;
+  }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width:1000px){
+    .filtros-grid{grid-template-columns:repeat(3,1fr);}
+    .kpi-grid{grid-template-columns:repeat(2,1fr);}
+    .ficha-selector{grid-template-columns:1fr;}
+  }
+  @media (max-width:640px){
+    header.app-header{padding:10px 12px;gap:10px;}
+    header.app-header h1{font-size:14.5px;}
+    header.app-header p{font-size:11px;}
+    header.app-header .badge-acento{display:none;}
+    .filtros-bar{top:72px;padding:10px 12px;}
+    .filtros-grid{grid-template-columns:repeat(2,1fr);}
+    .kpi-grid{grid-template-columns:repeat(2,1fr);}
+    .kpi-card .kpi-valor{font-size:22px;}
+    main{padding:12px;}
+    #mapa{height:380px;}
+    .secciones-tabs{overflow-x:auto;flex-wrap:nowrap;}
+    .tab-btn{padding:9px 12px;font-size:12.5px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-wrap" id="logoWrap"><!-- logo MINSAL insertado via JS --></div>
+  <div class="titulos">
+    <h1>Dashboard de Tamizaje de Alcohol y Otras Drogas en APS</h1>
+    <p>División de Atención Primaria (DIVAP) &middot; Ministerio de Salud de Chile</p>
+  </div>
+  <span class="badge-acento">2014 – 2025</span>
+</header>
+
+<div class="filtros-bar">
+  <div class="filtros-grid">
+    <div class="filtro-item">
+      <label for="fAnio">Año</label>
+      <select id="fAnio"></select>
+    </div>
+    <div class="filtro-item">
+      <label for="fSS">Servicio de Salud</label>
+      <select id="fSS"><option value="">Todos</option></select>
+    </div>
+    <div class="filtro-item">
+      <label for="fComuna">Comuna</label>
+      <select id="fComuna"><option value="">Todas</option></select>
+    </div>
+    <div class="filtro-item">
+      <label for="fEstab">Establecimiento</label>
+      <select id="fEstab"><option value="">Todos</option></select>
+    </div>
+    <div class="filtro-item">
+      <label for="fTipo">Tipo</label>
+      <select id="fTipo"><option value="">Todos</option></select>
+    </div>
+    <div class="filtro-item">
+      <label for="fDependencia">Dependencia</label>
+      <select id="fDependencia"><option value="">Todas</option></select>
+    </div>
+  </div>
+  <div class="filtros-acciones">
+    <span class="chip-contexto" id="chipContexto">Mostrando: Chile · Año 2014 · Todos los establecimientos</span>
+    <button class="btn-reset" id="btnReset">Limpiar filtros</button>
+  </div>
+</div>
+
+<main>
+
+  <div class="kpi-grid" id="kpiGrid">
+    <!-- KPIs se llenan via JS -->
+  </div>
+
+  <div class="secciones-tabs">
+    <button class="tab-btn activo" data-vista="general">Visión General</button>
+    <button class="tab-btn" data-vista="mapa">Mapa</button>
+    <button class="tab-btn" data-vista="territorio">Análisis por Territorio</button>
+  </div>
+
+  <!-- ===== VISTA GENERAL ===== -->
+  <section class="vista activa" id="vistaGeneral">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3 id="tituloChartDrill">Tamizajes AUDIT aplicados por Servicio de Salud</h3>
+            <p class="chart-sub" id="subChartDrill">Año 2014 · Chile</p>
+          </div>
+          <button class="btn-png" data-target="chartDrill">⬇ PNG</button>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="chartDrill"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3>Resultados de la Evaluación</h3>
+            <p class="chart-sub" id="subChartResultados">Año 2014 · Chile</p>
+          </div>
+          <button class="btn-png" data-target="chartResultados">⬇ PNG</button>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="chartResultados"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3>Intervenciones Realizadas</h3>
+            <p class="chart-sub" id="subChartIntervenciones">Año 2014 · Chile</p>
+          </div>
+          <button class="btn-png" data-target="chartIntervenciones">⬇ PNG</button>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="chartIntervenciones"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3>Evolución de Tamizajes por Año</h3>
+            <p class="chart-sub" id="subChartSerie">Chile · todos los años disponibles</p>
+          </div>
+          <button class="btn-png" data-target="chartSerie">⬇ PNG</button>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="chartSerie"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== VISTA MAPA ===== -->
+  <section class="vista" id="vistaMapa">
+    <div id="mapa"></div>
+    <div class="mapa-leyenda">
+      <span><span class="dot" style="background:#1E8074"></span> Baja proporción de riesgo</span>
+      <span><span class="dot" style="background:#C9962B"></span> Proporción moderada</span>
+      <span><span class="dot" style="background:#C0392B"></span> Alta proporción de riesgo/dependencia</span>
+      <span>Tamaño del punto = volumen de tamizajes aplicados</span>
+    </div>
+  </section>
+
+  <!-- ===== VISTA TERRITORIO ===== -->
+  <section class="vista" id="vistaTerritorio">
+    <div class="ficha-selector">
+      <div class="filtro-item">
+        <label for="fichaNivel">Nivel</label>
+        <select id="fichaNivel">
+          <option value="pais">País</option>
+          <option value="ss">Servicio de Salud</option>
+          <option value="comuna">Comuna</option>
+          <option value="estab">Establecimiento</option>
+        </select>
+      </div>
+      <div class="filtro-item">
+        <label for="fichaEntidad">Territorio / Establecimiento</label>
+        <select id="fichaEntidad"><option value="">Chile (nivel país)</option></select>
+      </div>
+      <button class="btn-png" id="btnFichaPNG" style="height:38px;">⬇ Descargar ficha PNG</button>
+    </div>
+
+    <div id="fichaContenido"><!-- se genera via JS --></div>
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  <strong>DIVAP</strong> · División de Atención Primaria, Ministerio de Salud de Chile<br>
+  Fuente: Registro Estadístico Mensual (REM), consolidado por establecimiento. Actualizado: <span id="footerFecha"></span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* =========================================================================
+   Dashboard de Tamizaje de Alcohol y Otras Drogas en APS - DIVAP / MINSAL
+   Todo el código vive en index.html (requisito: un solo archivo publicado).
+   ========================================================================= */
+(function(){
+  "use strict";
+
+  var COLORES = {
+    azulOscuro:"#25306B", azul:"#005F9E", acento:"#6B2D8C", acentoSuave:"#8E4FB0",
+    rojo:"#C0392B", ambar:"#C9962B", verde:"#1E8074", gris:"#8A8FA3"
+  };
+
+  var LOGO_MINSAL_BASE64 = ""; // TODO: reemplazar por el logo real embebido en base64
+
+  var DATA = null;           // contenido completo de datos.json
+  var ESTAB_POR_ID = {};     // id -> establecimiento (para acceso O(1))
+  var CHARTS = {};           // instancias Chart.js activas, por id de canvas
+  var MAPA = null;
+  var MAPA_CAPAS = null;
+
+  var estado = {
+    anio: null,
+    ss: "", comuna: "", estab: "", tipo: "", dependencia: ""
+  };
+
+  /* ---------------------------- utilidades ------------------------------ */
+
+  function fmtNum(n){
+    if (n === null || n === undefined || isNaN(n)) return "—";
+    return Math.round(n).toLocaleString("es-CL");
+  }
+  function fmtPct(n){
+    if (n === null || n === undefined || isNaN(n)) return "—";
+    return n.toLocaleString("es-CL", {maximumFractionDigits:1}) + "%";
+  }
+  function hoyISO(){
+    var d = new Date();
+    return d.toLocaleDateString("es-CL", {year:"numeric", month:"long", day:"numeric"});
+  }
+  function slug(s){
+    return (s || "grafico").toString().toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+  }
+
+  /* ------------------------- carga de datos ------------------------------ */
+
+  function cargarDatos(){
+    return fetch("./datos.json")
+      .then(function(r){
+        if(!r.ok) throw new Error("No se pudo cargar datos.json ("+r.status+")");
+        return r.json();
+      })
+      .then(function(json){
+        DATA = json;
+        (DATA.establecimientos || []).forEach(function(e){ ESTAB_POR_ID[e.id] = e; });
+      });
+  }
+
+  /* ------------------------- construcción filtros ------------------------ */
+
+  function poblarSelect(select, valores, placeholder){
+    select.innerHTML = "";
+    var optTodos = document.createElement("option");
+    optTodos.value = ""; optTodos.textContent = placeholder;
+    select.appendChild(optTodos);
+    valores.forEach(function(v){
+      var o = document.createElement("option");
+      o.value = v.value; o.textContent = v.label;
+      select.appendChild(o);
+    });
+  }
+
+  function aniosDisponibles(){
+    return Object.keys(DATA.anios || {}).map(Number).sort(function(a,b){return a-b;});
+  }
+
+  function inicializarFiltroAnio(){
+    var anios = aniosDisponibles();
+    var select = document.getElementById("fAnio");
+    select.innerHTML = "";
+    anios.forEach(function(a){
+      var o = document.createElement("option");
+      o.value = a; o.textContent = a;
+      select.appendChild(o);
+    });
+    estado.anio = anios[anios.length-1]; // por defecto, año más reciente disponible
+    select.value = estado.anio;
+  }
+
+  // devuelve la lista de establecimientos que cumplen los filtros EXCLUYENDO
+  // el propio filtro "campo" (para poblar sus opciones en cascada sin
+  // auto-restringirse)
+  function establecimientosFiltrados(excluir){
+    var lk = DATA.lookups;
+    return (DATA.establecimientos || []).filter(function(e){
+      if (excluir !== "ss" && estado.ss !== "" && String(e.ss) !== estado.ss) return false;
+      if (excluir !== "comuna" && estado.comuna !== "" && String(e.comuna) !== estado.comuna) return false;
+      if (excluir !== "estab" && estado.estab !== "" && String(e.id) !== estado.estab) return false;
+      if (excluir !== "tipo" && estado.tipo !== "" && String(e.tipoCorto) !== estado.tipo) return false;
+      if (excluir !== "dependencia" && estado.dependencia !== "" && String(e.dependencia) !== estado.dependencia) return false;
+      return true;
+    });
+  }
+
+  function actualizarCascada(){
+    var lk = DATA.lookups;
+
+    // --- Servicio de Salud ---
+    var base = establecimientosFiltrados("ss");
+    var ssIdx = Array.from(new Set(base.map(function(e){return e.ss;}))).sort(function(a,b){
+      return lk.ss[a].localeCompare(lk.ss[b],"es");
+    });
+    poblarSelect(document.getElementById("fSS"), ssIdx.map(function(i){return {value:i, label:lk.ss[i]};}), "Todos");
+    document.getElementById("fSS").value = estado.ss;
+
+    // --- Comuna (dentro del SS ya elegido, si aplica) ---
+    var baseComuna = establecimientosFiltrados("comuna");
+    var comunaIdx = Array.from(new Set(baseComuna.map(function(e){return e.comuna;}))).sort(function(a,b){
+      return lk.comunas[a].localeCompare(lk.comunas[b],"es");
+    });
+    poblarSelect(document.getElementById("fComuna"), comunaIdx.map(function(i){return {value:i, label:lk.comunas[i]};}), "Todas");
+    document.getElementById("fComuna").value = estado.comuna;
+
+    // --- Establecimiento ---
+    var baseEstab = establecimientosFiltrados("estab").slice().sort(function(a,b){
+      return a.nombre.localeCompare(b.nombre,"es");
+    });
+    poblarSelect(document.getElementById("fEstab"), baseEstab.map(function(e){return {value:e.id, label:e.nombre};}), "Todos");
+    document.getElementById("fEstab").value = estado.estab;
+
+    // --- Tipo (tipoCorto) ---
+    var baseTipo = establecimientosFiltrados("tipo");
+    var tipoIdx = Array.from(new Set(baseTipo.map(function(e){return e.tipoCorto;}))).sort(function(a,b){
+      return lk.tipoCorto[a].localeCompare(lk.tipoCorto[b],"es");
+    });
+    poblarSelect(document.getElementById("fTipo"), tipoIdx.map(function(i){return {value:i, label:lk.tipoCorto[i]};}), "Todos");
+    document.getElementById("fTipo").value = estado.tipo;
+
+    // --- Dependencia ---
+    var baseDep = establecimientosFiltrados("dependencia");
+    var depIdx = Array.from(new Set(baseDep.map(function(e){return e.dependencia;}))).sort(function(a,b){
+      return lk.dependencia[a].localeCompare(lk.dependencia[b],"es");
+    });
+    poblarSelect(document.getElementById("fDependencia"), depIdx.map(function(i){return {value:i, label:lk.dependencia[i]};}), "Todas");
+    document.getElementById("fDependencia").value = estado.dependencia;
+  }
+
+  function establecimientosActivos(){
+    return establecimientosFiltrados(null);
+  }
+
+  function contextoTexto(){
+    var lk = DATA.lookups;
+    var partes = [];
+    partes.push(estado.estab ? ESTAB_POR_ID[estado.estab].nombre :
+                estado.comuna !== "" ? lk.comunas[estado.comuna] :
+                estado.ss !== "" ? lk.ss[estado.ss] : "Chile");
+    if (estado.tipo !== "") partes.push(lk.tipoCorto[estado.tipo]);
+    if (estado.dependencia !== "") partes.push(lk.dependencia[estado.dependencia]);
+    partes.push("Año " + estado.anio);
+    return partes.join(" · ");
+  }
+
+  /* --------------------------- agregación datos --------------------------- */
+
+  function datosAnio(anio){
+    return (DATA.anios || {})[String(anio)] || null;
+  }
+
+  function totalTamizajesEstab(estId, anio){
+    var da = datosAnio(anio);
+    if (!da || !da.tamizajes) return 0;
+    var reg = da.tamizajes[String(estId)];
+    if (!reg) return 0;
+    var total = 0;
+    Object.keys(reg).forEach(function(instr){
+      var v = reg[instr];
+      if (typeof v === "object" && v !== null){
+        total += (v.total !== undefined ? (v.total || 0) : ((v.EMP||0)+(v.EMPAM||0)));
+      } else {
+        total += (v || 0);
+      }
+    });
+    return total;
+  }
+
+  function resultadosEstab(estId, anio){
+    var da = datosAnio(anio);
+    var def = {bajoRiesgo:0, consumoRiesgoso:0, consumoPerjudicial:0};
+    if (!da || !da.resultados) return def;
+    var r = da.resultados[String(estId)];
+    if (!r) return def;
+    return {
+      bajoRiesgo: r.bajoRiesgo || 0,
+      consumoRiesgoso: r.consumoRiesgoso || 0,
+      consumoPerjudicial: r.consumoPerjudicial || 0
+    };
+  }
+
+  function intervencionesEstab(estId, anio){
+    var da = datosAnio(anio);
+    var def = {minimas:0, breves:0, referencias:0};
+    if (!da || !da.intervenciones) return def;
+    var r = da.intervenciones[String(estId)];
+    if (!r) return def;
+    return {
+      minimas: r.minimas || 0,
+      breves: r.breves || 0,
+      referencias: r.referencias || 0
+    };
+  }
+
+  function agregarSobre(lista, anio){
+    var out = {
+      tamizajesTotal:0,
+      resultados:{bajoRiesgo:0, consumoRiesgoso:0, consumoPerjudicial:0},
+      intervenciones:{minimas:0, breves:0, referencias:0},
+      nEstablecimientos: lista.length
+    };
+    lista.forEach(function(e){
+      out.tamizajesTotal += totalTamizajesEstab(e.id, anio);
+      var r = resultadosEstab(e.id, anio);
+      out.resultados.bajoRiesgo += r.bajoRiesgo;
+      out.resultados.consumoRiesgoso += r.consumoRiesgoso;
+      out.resultados.consumoPerjudicial += r.consumoPerjudicial;
+      var iv = intervencionesEstab(e.id, anio);
+      out.intervenciones.minimas += iv.minimas;
+      out.intervenciones.breves += iv.breves;
+      out.intervenciones.referencias += iv.referencias;
+    });
+    return out;
+  }
+
+  /* ------------------------------- KPIs ----------------------------------- */
+
+  function renderKPIs(agr){
+    var totalEval = agr.resultados.bajoRiesgo + agr.resultados.consumoRiesgoso + agr.resultados.consumoPerjudicial;
+    var pctRiesgo = totalEval > 0 ? (agr.resultados.consumoRiesgoso + agr.resultados.consumoPerjudicial) / totalEval * 100 : null;
+    var totalIntervenciones = agr.intervenciones.minimas + agr.intervenciones.breves + agr.intervenciones.referencias;
+
+    var kpis = [
+      {label:"Tamizajes aplicados", valor:fmtNum(agr.tamizajesTotal), sub:"Total instrumentos, año "+estado.anio, clase:""},
+      {label:"Resultados en riesgo", valor:fmtPct(pctRiesgo), sub:"Consumo riesgoso + perjudicial/dependencia", clase:"rojo"},
+      {label:"Intervenciones realizadas", valor:fmtNum(totalIntervenciones), sub:"Mínimas + breves + referencias asistidas", clase:"acento"},
+      {label:"Establecimientos con datos", valor:fmtNum(agr.nEstablecimientos), sub:"Dentro del filtro activo", clase:"verde"}
+    ];
+
+    var grid = document.getElementById("kpiGrid");
+    grid.innerHTML = "";
+    kpis.forEach(function(k){
+      var div = document.createElement("div");
+      div.className = "kpi-card" + (k.clase ? " "+k.clase : "");
+      div.innerHTML = "<div class='kpi-label'>"+k.label+"</div>"+
+                       "<div class='kpi-valor'>"+k.valor+"</div>"+
+                       "<div class='kpi-sub'>"+k.sub+"</div>";
+      grid.appendChild(div);
+    });
+  }
+
+  /* ------------------------------ gráficos --------------------------------- */
+
+  function destruirChart(id){
+    if (CHARTS[id]){ CHARTS[id].destroy(); delete CHARTS[id]; }
+  }
+
+  // gráfico "drill": agrega por SS, o por Comuna si hay SS elegido, o por
+  // Establecimiento si hay Comuna elegida (o vacío si hay Establecimiento elegido)
+  function renderChartDrill(){
+    var lk = DATA.lookups;
+    var nivel, labels = [], valores = [], tituloNivel;
+
+    if (estado.estab !== ""){
+      var e = ESTAB_POR_ID[estado.estab];
+      labels = [e.nombre];
+      valores = [totalTamizajesEstab(e.id, estado.anio)];
+      tituloNivel = "Establecimiento seleccionado";
+    } else if (estado.comuna !== ""){
+      var lista = establecimientosActivos();
+      var porEstab = lista.map(function(e){return {label:e.nombre, valor:totalTamizajesEstab(e.id, estado.anio)};});
+      porEstab.sort(function(a,b){return b.valor-a.valor;});
+      porEstab = porEstab.slice(0,15);
+      labels = porEstab.map(function(x){return x.label;});
+      valores = porEstab.map(function(x){return x.valor;});
+      tituloNivel = "por establecimiento (Top 15)";
+    } else if (estado.ss !== ""){
+      var lista2 = establecimientosActivos();
+      var grupos = {};
+      lista2.forEach(function(e){
+        var key = e.comuna;
+        grupos[key] = (grupos[key]||0) + totalTamizajesEstab(e.id, estado.anio);
+      });
+      var arr = Object.keys(grupos).map(function(k){return {label:lk.comunas[k], valor:grupos[k]};});
+      arr.sort(function(a,b){return b.valor-a.valor;});
+      labels = arr.map(function(x){return x.label;});
+      valores = arr.map(function(x){return x.valor;});
+      tituloNivel = "por comuna";
+    } else {
+      var lista3 = establecimientosActivos();
+      var grupos2 = {};
+      lista3.forEach(function(e){
+        var key = e.ss;
+        grupos2[key] = (grupos2[key]||0) + totalTamizajesEstab(e.id, estado.anio);
+      });
+      var arr2 = Object.keys(grupos2).map(function(k){return {label:lk.ss[k], valor:grupos2[k]};});
+      arr2.sort(function(a,b){return b.valor-a.valor;});
+      labels = arr2.map(function(x){return x.label;});
+      valores = arr2.map(function(x){return x.valor;});
+      tituloNivel = "por Servicio de Salud";
+    }
+
+    document.getElementById("tituloChartDrill").textContent = "Tamizajes AUDIT/ASSIST/CRAFFT aplicados " + tituloNivel;
+    document.getElementById("subChartDrill").textContent = contextoTexto();
+
+    destruirChart("chartDrill");
+    var ctx = document.getElementById("chartDrill").getContext("2d");
+    CHARTS.chartDrill = new Chart(ctx, {
+      type:"bar",
+      data:{ labels: labels, datasets:[{ label:"Tamizajes", data: valores, backgroundColor: COLORES.azul, borderRadius:4 }] },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        indexAxis: labels.length>6 ? "y" : "x",
+        plugins:{ legend:{display:false}, title:{display:false} },
+        scales:{ x:{ticks:{autoSkip:false, maxRotation:45, minRotation:0}}, y:{beginAtZero:true} }
+      }
+    });
+  }
+
+  function renderChartResultados(agr){
+    document.getElementById("subChartResultados").textContent = contextoTexto();
+    destruirChart("chartResultados");
+    var ctx = document.getElementById("chartResultados").getContext("2d");
+    CHARTS.chartResultados = new Chart(ctx, {
+      type:"doughnut",
+      data:{
+        labels:["Bajo riesgo","Consumo riesgoso","Consumo perjudicial / dependencia"],
+        datasets:[{
+          data:[agr.resultados.bajoRiesgo, agr.resultados.consumoRiesgoso, agr.resultados.consumoPerjudicial],
+          backgroundColor:[COLORES.verde, COLORES.ambar, COLORES.rojo],
+          borderWidth:2, borderColor:"#fff"
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{position:"bottom", labels:{boxWidth:12, font:{size:11}}} }
+      }
+    });
+  }
+
+  function renderChartIntervenciones(agr){
+    document.getElementById("subChartIntervenciones").textContent = contextoTexto();
+    destruirChart("chartIntervenciones");
+    var ctx = document.getElementById("chartIntervenciones").getContext("2d");
+    CHARTS.chartIntervenciones = new Chart(ctx, {
+      type:"bar",
+      data:{
+        labels:["Intervención mínima","Intervención breve","Referencia asistida"],
+        datasets:[{
+          data:[agr.intervenciones.minimas, agr.intervenciones.breves, agr.intervenciones.referencias],
+          backgroundColor:[COLORES.azulOscuro, COLORES.azul, COLORES.acento],
+          borderRadius:4
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false} },
+        scales:{ y:{beginAtZero:true} }
+      }
+    });
+  }
+
+  function renderChartSerie(){
+    var anios = aniosDisponibles();
+    var lista = establecimientosActivos();
+    var valores = anios.map(function(a){
+      var total = 0;
+      lista.forEach(function(e){ total += totalTamizajesEstab(e.id, a); });
+      return total;
+    });
+    document.getElementById("subChartSerie").textContent = contextoTexto().replace(/Año \d+/, "todos los años");
+    destruirChart("chartSerie");
+    var ctx = document.getElementById("chartSerie").getContext("2d");
+    CHARTS.chartSerie = new Chart(ctx, {
+      type:"line",
+      data:{
+        labels: anios,
+        datasets:[{
+          label:"Tamizajes totales", data: valores,
+          borderColor: COLORES.acento, backgroundColor: "rgba(107,45,138,0.12)",
+          fill:true, tension:.25, pointRadius:4, pointBackgroundColor: COLORES.acento
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false} },
+        scales:{ y:{beginAtZero:true} }
+      }
+    });
+  }
+
+  /* -------------------------------- mapa ----------------------------------- */
+
+  function inicializarMapa(){
+    if (MAPA) return;
+    MAPA = L.map("mapa", {scrollWheelZoom:true}).setView([-33.45, -70.66], 5);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom:18, attribution:"&copy; OpenStreetMap"
+    }).addTo(MAPA);
+    MAPA_CAPAS = L.layerGroup().addTo(MAPA);
+  }
+
+  function colorPorRiesgo(r){
+    var total = r.bajoRiesgo + r.consumoRiesgoso + r.consumoPerjudicial;
+    if (total === 0) return COLORES.gris;
+    var pctRiesgo = (r.consumoRiesgoso + r.consumoPerjudicial) / total;
+    if (pctRiesgo < 0.15) return COLORES.verde;
+    if (pctRiesgo < 0.30) return COLORES.ambar;
+    return COLORES.rojo;
+  }
+
+  function renderMapa(){
+    if (!MAPA) return;
+    MAPA_CAPAS.clearLayers();
+    var lista = establecimientosActivos();
+    var bounds = [];
+    lista.forEach(function(e){
+      if (e.lat === null || e.lon === null || e.lat === undefined || e.lon === undefined) return;
+      var tam = totalTamizajesEstab(e.id, estado.anio);
+      var res = resultadosEstab(e.id, estado.anio);
+      var radio = 4 + Math.min(16, Math.sqrt(tam) * 0.6);
+      var marker = L.circleMarker([e.lat, e.lon], {
+        radius: radio, color: colorPorRiesgo(res), fillColor: colorPorRiesgo(res),
+        fillOpacity:0.65, weight:1.5
+      });
+      marker.bindPopup(
+        "<strong>"+e.nombre+"</strong><br>"+
+        DATA.lookups.comunas[e.comuna]+" · "+DATA.lookups.ss[e.ss]+"<br>"+
+        "Tamizajes "+estado.anio+": "+fmtNum(tam)+"<br>"+
+        "Consumo riesgoso: "+fmtNum(res.consumoRiesgoso)+" · Perjudicial/dependencia: "+fmtNum(res.consumoPerjudicial)
+      );
+      MAPA_CAPAS.addLayer(marker);
+      bounds.push([e.lat, e.lon]);
+    });
+    if (bounds.length){
+      try { MAPA.fitBounds(bounds, {padding:[20,20], maxZoom:11}); } catch(e){}
+    }
+  }
+
+  /* ------------------------- ficha de territorio ---------------------------- */
+
+  function poblarFichaEntidad(){
+    var nivel = document.getElementById("fichaNivel").value;
+    var select = document.getElementById("fichaEntidad");
+    var lk = DATA.lookups;
+    select.innerHTML = "";
+    if (nivel === "pais"){
+      var o = document.createElement("option");
+      o.value=""; o.textContent="Chile (nivel país)";
+      select.appendChild(o);
+      select.disabled = true;
+    } else if (nivel === "ss"){
+      select.disabled = false;
+      lk.ss.forEach(function(nombre, i){
+        var o = document.createElement("option"); o.value=i; o.textContent=nombre; select.appendChild(o);
+      });
+    } else if (nivel === "comuna"){
+      select.disabled = false;
+      var comunasConDatos = Array.from(new Set(DATA.establecimientos.map(function(e){return e.comuna;})))
+        .sort(function(a,b){return lk.comunas[a].localeCompare(lk.comunas[b],"es");});
+      comunasConDatos.forEach(function(i){
+        var o = document.createElement("option"); o.value=i; o.textContent=lk.comunas[i]; select.appendChild(o);
+      });
+    } else if (nivel === "estab"){
+      select.disabled = false;
+      DATA.establecimientos.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre,"es");})
+        .forEach(function(e){
+          var o = document.createElement("option"); o.value=e.id; o.textContent=e.nombre; select.appendChild(o);
+        });
+    }
+  }
+
+  function listaParaFicha(){
+    var nivel = document.getElementById("fichaNivel").value;
+    var val = document.getElementById("fichaEntidad").value;
+    if (nivel === "pais") return DATA.establecimientos;
+    if (nivel === "ss") return DATA.establecimientos.filter(function(e){return String(e.ss)===val;});
+    if (nivel === "comuna") return DATA.establecimientos.filter(function(e){return String(e.comuna)===val;});
+    if (nivel === "estab") return DATA.establecimientos.filter(function(e){return String(e.id)===val;});
+    return DATA.establecimientos;
+  }
+
+  function nombreFicha(){
+    var nivel = document.getElementById("fichaNivel").value;
+    var val = document.getElementById("fichaEntidad").value;
+    var lk = DATA.lookups;
+    if (nivel === "pais") return "Chile";
+    if (nivel === "ss") return lk.ss[val];
+    if (nivel === "comuna") return lk.comunas[val];
+    if (nivel === "estab") return ESTAB_POR_ID[val] ? ESTAB_POR_ID[val].nombre : "";
+    return "";
+  }
+
+  function renderFicha(){
+    var lista = listaParaFicha();
+    var agr = agregarSobre(lista, estado.anio);
+    var totalEval = agr.resultados.bajoRiesgo + agr.resultados.consumoRiesgoso + agr.resultados.consumoPerjudicial;
+    var pctRiesgo = totalEval>0 ? (agr.resultados.consumoRiesgoso+agr.resultados.consumoPerjudicial)/totalEval*100 : null;
+
+    var cont = document.getElementById("fichaContenido");
+    cont.innerHTML =
+      "<div class='ficha-header'>"+
+        "<div class='ficha-cabecera-flex'>"+
+          "<div><h2>"+nombreFicha()+"</h2><p>Año "+estado.anio+" · "+fmtNum(agr.nEstablecimientos)+" establecimiento(s) considerado(s)</p></div>"+
+        "</div>"+
+      "</div>"+
+      "<div class='kpi-grid' id='fichaKPIs'></div>"+
+      "<div class='charts-grid'>"+
+        "<div class='chart-card'><h3>Resultados de la evaluación</h3><p class='chart-sub'>Año "+estado.anio+"</p>"+
+          "<div class='chart-canvas-wrap'><canvas id='fichaChartResultados'></canvas></div></div>"+
+        "<div class='chart-card'><h3>Intervenciones realizadas</h3><p class='chart-sub'>Año "+estado.anio+"</p>"+
+          "<div class='chart-canvas-wrap'><canvas id='fichaChartIntervenciones'></canvas></div></div>"+
+      "</div>";
+
+    var kpis = [
+      {label:"Tamizajes aplicados", valor:fmtNum(agr.tamizajesTotal), clase:""},
+      {label:"% en riesgo", valor:fmtPct(pctRiesgo), clase:"rojo"},
+      {label:"Intervenciones totales", valor:fmtNum(agr.intervenciones.minimas+agr.intervenciones.breves+agr.intervenciones.referencias), clase:"acento"},
+      {label:"Establecimientos", valor:fmtNum(agr.nEstablecimientos), clase:"verde"}
+    ];
+    var grid = document.getElementById("fichaKPIs");
+    kpis.forEach(function(k){
+      var div = document.createElement("div");
+      div.className = "kpi-card"+(k.clase?" "+k.clase:"");
+      div.innerHTML = "<div class='kpi-label'>"+k.label+"</div><div class='kpi-valor'>"+k.valor+"</div>";
+      grid.appendChild(div);
+    });
+
+    destruirChart("fichaChartResultados");
+    var ctx1 = document.getElementById("fichaChartResultados").getContext("2d");
+    CHARTS.fichaChartResultados = new Chart(ctx1, {
+      type:"doughnut",
+      data:{ labels:["Bajo riesgo","Consumo riesgoso","Consumo perjudicial/dependencia"],
+        datasets:[{data:[agr.resultados.bajoRiesgo,agr.resultados.consumoRiesgoso,agr.resultados.consumoPerjudicial],
+          backgroundColor:[COLORES.verde,COLORES.ambar,COLORES.rojo], borderWidth:2, borderColor:"#fff"}] },
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:"bottom",labels:{boxWidth:12,font:{size:11}}}}}
+    });
+
+    destruirChart("fichaChartIntervenciones");
+    var ctx2 = document.getElementById("fichaChartIntervenciones").getContext("2d");
+    CHARTS.fichaChartIntervenciones = new Chart(ctx2, {
+      type:"bar",
+      data:{ labels:["Mínima","Breve","Referencia asistida"],
+        datasets:[{data:[agr.intervenciones.minimas,agr.intervenciones.breves,agr.intervenciones.referencias],
+          backgroundColor:[COLORES.azulOscuro,COLORES.azul,COLORES.acento], borderRadius:4}] },
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}
+    });
+  }
+
+  /* ------------------------------- export PNG ------------------------------- */
+
+  function descargarCanvas(canvas, nombreArchivo){
+    var link = document.createElement("a");
+    link.download = nombreArchivo;
+    link.href = canvas.toDataURL("image/png");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function exportarChartPNG(idCanvas, titulo, subtitulo){
+    var chart = CHARTS[idCanvas];
+    if (!chart) return;
+    var srcCanvas = chart.canvas; // ya viene renderizado a devicePixelRatio (alta resolución)
+    var padTop = 78, padBottom = 46, padSide = 24;
+    var w = srcCanvas.width + padSide*2;
+    var h = srcCanvas.height + padTop + padBottom;
+
+    var out = document.createElement("canvas");
+    out.width = w; out.height = h;
+    var ctx = out.getContext("2d");
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0,0,w,h);
+
+    // barra superior institucional
+    ctx.fillStyle = COLORES.azulOscuro;
+    ctx.fillRect(0,0,w,6);
+
+    ctx.fillStyle = "#1B1F3B";
+    ctx.font = "bold 20px -apple-system, Arial, sans-serif";
+    ctx.fillText(titulo, padSide, 34);
+
+    ctx.fillStyle = "#6B7280";
+    ctx.font = "13px -apple-system, Arial, sans-serif";
+    ctx.fillText(subtitulo, padSide, 54);
+
+    ctx.drawImage(srcCanvas, padSide, padTop, srcCanvas.width, srcCanvas.height);
+
+    // pie institucional
+    ctx.fillStyle = COLORES.acento;
+    ctx.fillRect(0, h-padBottom, w, 3);
+    ctx.fillStyle = "#6B7280";
+    ctx.font = "11px -apple-system, Arial, sans-serif";
+    ctx.fillText("DIVAP · Ministerio de Salud de Chile — Dashboard de Tamizaje de Alcohol y Otras Drogas en APS", padSide, h-22);
+    ctx.fillText("Generado el " + hoyISO(), padSide, h-8);
+
+    descargarCanvas(out, slug(titulo) + "_" + estado.anio + ".png");
+  }
+
+  function exportarFichaPNG(){
+    // composición manual: título + KPIs textuales + los dos mini-gráficos de la ficha
+    var nombre = nombreFicha();
+    var c1 = CHARTS.fichaChartResultados ? CHARTS.fichaChartResultados.canvas : null;
+    var c2 = CHARTS.fichaChartIntervenciones ? CHARTS.fichaChartIntervenciones.canvas : null;
+    if (!c1 || !c2) return;
+
+    var padSide = 24, padTop = 90, gapCharts = 20;
+    var chartW = Math.max(c1.width, c2.width);
+    var w = padSide*2 + chartW*2 + gapCharts;
+    var h = padTop + Math.max(c1.height, c2.height) + 70;
+
+    var out = document.createElement("canvas");
+    out.width = w; out.height = h;
+    var ctx = out.getContext("2d");
+    ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = COLORES.azulOscuro; ctx.fillRect(0,0,w,64);
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 22px -apple-system, Arial, sans-serif";
+    ctx.fillText("Ficha de territorio: " + nombre, padSide, 30);
+    ctx.font = "13px -apple-system, Arial, sans-serif";
+    ctx.fillText("Año " + estado.anio + " · Tamizaje de Alcohol y Otras Drogas en APS", padSide, 50);
+
+    ctx.drawImage(c1, padSide, padTop, c1.width, c1.height);
+    ctx.drawImage(c2, padSide + c1.width + gapCharts, padTop, c2.width, c2.height);
+
+    ctx.fillStyle = COLORES.acento; ctx.fillRect(0, h-26, w, 3);
+    ctx.fillStyle = "#6B7280"; ctx.font = "11px -apple-system, Arial, sans-serif";
+    ctx.fillText("DIVAP · Ministerio de Salud de Chile — Generado el " + hoyISO(), padSide, h-8);
+
+    descargarCanvas(out, "ficha_" + slug(nombre) + "_" + estado.anio + ".png");
+  }
+
+  /* --------------------------------- tabs ----------------------------------- */
+
+  function activarVista(nombre){
+    document.querySelectorAll(".vista").forEach(function(v){ v.classList.remove("activa"); });
+    document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("activo"); });
+    document.getElementById("vista" + nombre.charAt(0).toUpperCase() + nombre.slice(1)).classList.add("activa");
+    document.querySelector('.tab-btn[data-vista="'+nombre+'"]').classList.add("activo");
+    if (nombre === "mapa"){
+      inicializarMapa();
+      setTimeout(function(){ MAPA.invalidateSize(); renderMapa(); }, 50);
+    }
+    if (nombre === "territorio"){
+      renderFicha();
+    }
+  }
+
+  /* -------------------------------- render general ---------------------------- */
+
+  function renderTodo(){
+    actualizarCascada();
+    document.getElementById("chipContexto").textContent = "Mostrando: " + contextoTexto();
+
+    var lista = establecimientosActivos();
+    var agr = agregarSobre(lista, estado.anio);
+
+    renderKPIs(agr);
+    renderChartDrill();
+    renderChartResultados(agr);
+    renderChartIntervenciones(agr);
+    renderChartSerie();
+
+    if (MAPA) renderMapa();
+
+    var vistaActiva = document.querySelector(".vista.activa").id;
+    if (vistaActiva === "vistaTerritorio") renderFicha();
+  }
+
+  /* ------------------------------- listeners ---------------------------------- */
+
+  function bindEventos(){
+    document.getElementById("fAnio").addEventListener("change", function(e){ estado.anio = e.target.value; renderTodo(); });
+    document.getElementById("fSS").addEventListener("change", function(e){ estado.ss = e.target.value; estado.comuna=""; estado.estab=""; renderTodo(); });
+    document.getElementById("fComuna").addEventListener("change", function(e){ estado.comuna = e.target.value; estado.estab=""; renderTodo(); });
+    document.getElementById("fEstab").addEventListener("change", function(e){ estado.estab = e.target.value; renderTodo(); });
+    document.getElementById("fTipo").addEventListener("change", function(e){ estado.tipo = e.target.value; renderTodo(); });
+    document.getElementById("fDependencia").addEventListener("change", function(e){ estado.dependencia = e.target.value; renderTodo(); });
+
+    document.getElementById("btnReset").addEventListener("click", function(){
+      estado.ss=""; estado.comuna=""; estado.estab=""; estado.tipo=""; estado.dependencia="";
+      renderTodo();
+    });
+
+    document.querySelectorAll(".tab-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){ activarVista(btn.getAttribute("data-vista")); });
+    });
+
+    document.querySelectorAll(".btn-png[data-target]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = btn.getAttribute("data-target");
+        var titulo = document.getElementById("titulo"+id.charAt(0).toUpperCase()+id.slice(1))
+          ? document.getElementById("titulo"+id.charAt(0).toUpperCase()+id.slice(1)).textContent
+          : btn.closest(".chart-card").querySelector("h3").textContent;
+        var sub = btn.closest(".chart-card").querySelector(".chart-sub").textContent;
+        exportarChartPNG(id, titulo, sub);
+      });
+    });
+
+    document.getElementById("fichaNivel").addEventListener("change", function(){ poblarFichaEntidad(); renderFicha(); });
+    document.getElementById("fichaEntidad").addEventListener("change", function(){ renderFicha(); });
+    document.getElementById("btnFichaPNG").addEventListener("click", exportarFichaPNG);
+  }
+
+  function insertarLogo(){
+    var wrap = document.getElementById("logoWrap");
+    if (LOGO_MINSAL_BASE64){
+      var img = document.createElement("img");
+      img.src = LOGO_MINSAL_BASE64;
+      img.alt = "Logo MINSAL";
+      wrap.appendChild(img);
+    } else {
+      wrap.innerHTML = "<span style='font-size:9px;font-weight:800;color:#25306B;text-align:center;line-height:1.1;'>MINSAL</span>";
+    }
+  }
+
+  /* --------------------------------- init -------------------------------------- */
+
+  document.addEventListener("DOMContentLoaded", function(){
+    cargarDatos().then(function(){
+      insertarLogo();
+      inicializarFiltroAnio();
+      document.getElementById("footerFecha").textContent = DATA.meta && DATA.meta.actualizado ? DATA.meta.actualizado : hoyISO();
+      bindEventos();
+      renderTodo();
+    }).catch(function(err){
+      document.querySelector("main").innerHTML = "<div class='estado-vacio'>No se pudieron cargar los datos (" + err.message + "). Verifique que datos.json esté publicado junto a index.html.</div>";
+      console.error(err);
+    });
+  });
+
+})();
+
+</script>
+</body>
+</html>
