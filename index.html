@@ -507,6 +507,11 @@
     if (n === null || n === undefined || isNaN(n)) return "—";
     return Math.round(n).toLocaleString("es-CL");
   }
+  function fmtCompacto(n){
+    if (n >= 1e6) return (n/1e6).toLocaleString("es-CL",{maximumFractionDigits:2}) + " M";
+    if (n >= 1e3) return Math.round(n/1e3).toLocaleString("es-CL") + " mil";
+    return String(n);
+  }
   function fmtPct(n){
     if (n === null || n === undefined || isNaN(n)) return "—";
     return n.toLocaleString("es-CL", {maximumFractionDigits:1}) + "%";
@@ -1234,7 +1239,8 @@
     var sinCargar = labels.length - anios.length;
     document.getElementById("subChartSerie").textContent = contextoTexto(true) + (estado.instr ? "" : " · total de instrumentos") +
       (sinCargar > 0 ? " · años sin datos cargados aún: se muestran como corte" : "") +
-      (estado.instr ? " · los años en que el REM no registra este instrumento quedan en blanco" : "");
+      (estado.instr ? " · los años en que el REM no registra este instrumento quedan en blanco" : "") +
+      (aniosDisponibles().some(esParcial) ? " · * año parcial: datos de enero a " + MESES[DATA.meta.parcial[String(aniosDisponibles().filter(esParcial)[0])].hasta_mes].toLowerCase() : "");
     destruirChart("chartSerie");
     var ctx = document.getElementById("chartSerie").getContext("2d");
     CHARTS.chartSerie = new Chart(ctx, {
@@ -1250,10 +1256,35 @@
       options:{
         responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){
-          return fmtNum(c.parsed.y) + " tamizajes" + (esParcial(c.label) ? " (año parcial)" : "");
+          return fmtNum(c.parsed.y) + " tamizajes" + (esParcial(c.label) ? " (año parcial: enero a " + MESES[DATA.meta.parcial[String(c.label)].hasta_mes].toLowerCase() + ")" : "");
         }}}},
-        scales:{ y:{beginAtZero:true} }
-      }
+        layout:{ padding:{ top:34, right:18 } },
+        scales:{
+          x:{ ticks:{ callback:function(v){ var l = this.getLabelForValue(v); return esParcial(l) ? [String(l), "ene-" + MESES[DATA.meta.parcial[String(l)].hasta_mes].slice(0,3)] : String(l); } } },
+          y:{beginAtZero:true, grace:"8%"}
+        }
+      },
+      plugins:[{
+        id:"etiquetasValor",
+        afterDatasetsDraw:function(chart){
+          var meta = chart.getDatasetMeta(0), ds = chart.data.datasets[0], c = chart.ctx;
+          var angosto = chart.width < 700;
+          c.save();
+          c.font = "700 " + (angosto ? 11 : 15) + "px Inter, system-ui, sans-serif";
+          c.fillStyle = COLORES.azulOscuro; c.textAlign = "center"; c.textBaseline = "bottom";
+          meta.data.forEach(function(pt, i){
+            var v = ds.data[i];
+            if (v === null || v === undefined) return;
+            if (angosto && i % 2 === (meta.data.length - 1) % 2 ? false : angosto) return;  // en pantallas angostas, un año por medio (siempre el último)
+            var txt = angosto ? fmtCompacto(v) : fmtNum(v);
+            if (esParcial(chart.data.labels[i])) txt += "*";
+            var x = Math.min(Math.max(pt.x, c.measureText(txt).width/2 + 2), chart.width - c.measureText(txt).width/2 - 2);
+            c.lineWidth = 4; c.strokeStyle = "#fff"; c.lineJoin = "round"; c.strokeText(txt, x, pt.y - 10);
+            c.fillText(txt, x, pt.y - 10);
+          });
+          c.restore();
+        }
+      }]
     });
   }
 
