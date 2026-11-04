@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Dashboard de Tamizaje de Alcohol y Otras Drogas en APS | DIVAP - MINSAL</title>
+<title>Dashboard de Tamizaje de Alcohol y Otras Drogas en APS</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root{
@@ -44,13 +44,6 @@
     z-index:1000;
     box-shadow:0 2px 12px rgba(0,0,0,0.18);
   }
-  header.app-header .logo-wrap{
-    width:52px;height:52px;flex:0 0 auto;
-    background:#fff;border-radius:10px;
-    display:flex;align-items:center;justify-content:center;
-    overflow:hidden;
-  }
-  header.app-header .logo-wrap img{width:100%;height:100%;object-fit:contain;}
   header.app-header .titulos{flex:1;min-width:0;}
   header.app-header h1{
     font-size:17px;margin:0;line-height:1.25;font-weight:700;
@@ -111,7 +104,7 @@
   main{max-width:1400px;margin:0 auto;padding:20px;}
 
   .kpi-grid{
-    display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px;
   }
   .kpi-card{
     background:#fff;border-radius:var(--radio);padding:16px 18px;box-shadow:var(--sombra);
@@ -137,7 +130,7 @@
   .vista.activa{display:block;}
 
   .charts-grid{
-    display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:16px;margin-bottom:18px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(min(400px,100%),1fr));gap:16px;margin-bottom:18px;
   }
   .chart-card{
     background:#fff;border-radius:var(--radio);padding:16px 18px 10px;box-shadow:var(--sombra);
@@ -187,6 +180,31 @@
     text-align:center;padding:60px 20px;color:#8A8FA3;font-size:14px;
   }
 
+  /* ---------- METODOLOGÍA ---------- */
+  .btn-metodologia{
+    background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);
+    border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;
+  }
+  .btn-metodologia:hover{background:rgba(255,255,255,.26);}
+  .btn-metodologia:focus-visible,.btn-png:focus-visible,.tab-btn:focus-visible,.btn-reset:focus-visible{outline:2px solid var(--acento-suave);outline-offset:2px;}
+  .modal-fondo{
+    display:none;position:fixed;inset:0;background:rgba(20,24,56,.55);z-index:2000;
+    align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 14px;
+  }
+  .modal-fondo.abierto{display:flex;}
+  .modal-caja{
+    background:#fff;border-radius:12px;max-width:760px;width:100%;padding:22px 24px;box-shadow:0 10px 40px rgba(0,0,0,.3);
+  }
+  .modal-caja h2{margin:0 0 4px;font-size:18px;color:var(--azul-oscuro);}
+  .modal-caja h3{margin:18px 0 6px;font-size:14px;color:var(--azul-oscuro);}
+  .modal-caja p,.modal-caja li{font-size:13px;line-height:1.5;color:#2B2F4A;}
+  .modal-caja ul{margin:4px 0 0;padding-left:18px;}
+  .modal-caja table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px;}
+  .modal-caja th,.modal-caja td{border-bottom:1px solid var(--gris-borde);padding:7px 8px;text-align:left;vertical-align:top;}
+  .modal-caja th{color:var(--azul-oscuro);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;}
+  .modal-cerrar{float:right;background:none;border:1px solid var(--gris-borde);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12.5px;}
+  .nota-rem{font-size:11.5px;color:var(--acento);margin:0 0 8px;line-height:1.4;}
+
   /* ---------- RESPONSIVE ---------- */
   @media (max-width:1000px){
     .filtros-grid{grid-template-columns:repeat(3,1fr);}
@@ -198,7 +216,8 @@
     header.app-header h1{font-size:14.5px;}
     header.app-header p{font-size:11px;}
     header.app-header .badge-acento{display:none;}
-    .filtros-bar{top:72px;padding:10px 12px;}
+    header.app-header{position:static;}
+    .filtros-bar{position:static;padding:10px 12px;}
     .filtros-grid{grid-template-columns:repeat(2,1fr);}
     .kpi-grid{grid-template-columns:repeat(2,1fr);}
     .kpi-card .kpi-valor{font-size:22px;}
@@ -212,12 +231,12 @@
 <body>
 
 <header class="app-header">
-  <div class="logo-wrap" id="logoWrap"><!-- logo MINSAL insertado via JS --></div>
   <div class="titulos">
     <h1>Dashboard de Tamizaje de Alcohol y Otras Drogas en APS</h1>
-    <p>División de Atención Primaria (DIVAP) &middot; Ministerio de Salud de Chile</p>
+    <p>Atención Primaria de Salud &middot; Registro Estadístico Mensual (REM)</p>
   </div>
-  <span class="badge-acento">2014 – 2025</span>
+  <button class="btn-metodologia" id="btnMetodologia" type="button">ℹ Metodología</button>
+  <span class="badge-acento" id="badgeAnios"></span>
 </header>
 
 <div class="filtros-bar">
@@ -282,6 +301,18 @@
       <div class="chart-card">
         <div class="chart-head">
           <div>
+            <h3>Tamizajes por instrumento y contexto de aplicación</h3>
+            <p class="chart-sub" id="subChartInstrumentos">Año 2025 · Chile</p>
+          </div>
+          <button class="btn-png" data-target="chartInstrumentos">⬇ PNG</button>
+        </div>
+        <p class="nota-rem" id="notaChartInstrumentos"></p>
+        <div class="chart-canvas-wrap"><canvas id="chartInstrumentos"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
             <h3>Resultados de la Evaluación</h3>
             <p class="chart-sub" id="subChartResultados">Año 2014 · Chile</p>
           </div>
@@ -311,6 +342,39 @@
         </div>
         <div class="chart-canvas-wrap"><canvas id="chartSerie"></canvas></div>
       </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3>Tamizajes por sexo y rango etario</h3>
+            <p class="chart-sub" id="subChartSexoEdad">Año 2014 · Chile</p>
+          </div>
+          <button class="btn-png" data-target="chartSexoEdad">⬇ PNG</button>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="chartSexoEdad"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3>Intervenciones por tipo y sustancia</h3>
+            <p class="chart-sub" id="subChartSustancia">Año 2025 · Chile</p>
+          </div>
+          <button class="btn-png" data-target="chartSustancia">⬇ PNG</button>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="chartSustancia"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3>Las 20 comunas con mayor aplicación de tamizajes</h3>
+            <p class="chart-sub" id="subChartTopComunas">Año 2025 · Chile</p>
+          </div>
+          <button class="btn-png" data-target="chartTopComunas">⬇ PNG</button>
+        </div>
+        <div class="chart-canvas-wrap" style="height:420px"><canvas id="chartTopComunas"></canvas></div>
+      </div>
     </div>
   </section>
 
@@ -322,6 +386,8 @@
       <span><span class="dot" style="background:#C9962B"></span> Proporción moderada</span>
       <span><span class="dot" style="background:#C0392B"></span> Alta proporción de riesgo/dependencia</span>
       <span>Tamaño del punto = volumen de tamizajes aplicados</span>
+      <span><span class="dot" style="background:#8A8FA3"></span> Sin dato en el año</span>
+      <span id="mapaSinCoord"></span>
     </div>
   </section>
 
@@ -349,8 +415,40 @@
 
 </main>
 
+<div class="modal-fondo" id="modalMetodologia" role="dialog" aria-modal="true" aria-labelledby="tituloMetodologia">
+  <div class="modal-caja">
+    <button class="modal-cerrar" id="btnCerrarMetodologia" type="button">Cerrar</button>
+    <h2 id="tituloMetodologia">Metodología y alcance de los datos</h2>
+    <p>Fuente: Registro Estadístico Mensual (REM), Serie A, consolidado por establecimiento (código DEIS).</p>
+
+    <h3>Cómo ha cambiado el REM</h3>
+    <table>
+      <thead><tr><th>Año</th><th>Qué se registra</th></tr></thead>
+      <tbody>
+        <tr><td>2014-2015</td><td>Solo AUDIT (total). Sin distinguir AUDIT-C ni contexto de aplicación.</td></tr>
+        <tr><td>2016</td><td>Se agregan ASSIST y CRAFFT, pero juntos en una sola fila. Las intervenciones pasan a otro formulario (REM A27) con apertura por sustancia.</td></tr>
+        <tr><td>2018</td><td>ASSIST y CRAFFT se registran por separado.</td></tr>
+        <tr><td>2019</td><td>Se agrega la fila ASSIST/CRAFFT en EMP/EMPAM.</td></tr>
+        <tr><td>2020</td><td>La fila EMP/EMPAM pasa a ser solo ASSIST y se separa CRAFFT en el Control de Salud Integral del Adolescente.</td></tr>
+        <tr><td>2025</td><td>Se separa CRAFFT en EMP: CRAFFT queda con tres filas.</td></tr>
+      </tbody>
+    </table>
+    <p>Por eso <strong>lo comparable en toda la serie es el total de tamizajes</strong>. El detalle por instrumento y por contexto de aplicación aparece solo desde el año en que el REM lo separó.</p>
+
+    <h3>Reglas de cálculo</h3>
+    <ul>
+      <li>El total de tamizajes suma todas las filas de instrumentos del año; cada fila se diferencia solo por el contexto donde se aplicó (EMP/EMPAM, control adolescente o aplicado fuera de ellos).</li>
+      <li>Edad y sexo son dos aperturas del mismo total. Si no coinciden, el total corresponde a la suma por edad.</li>
+      <li>Desde 2025 el REM cruza edad con sexo y agrupa 65-69, 70-79 y 80 y más; aquí se muestran juntos como "65 y más" para compararlos con años anteriores.</li>
+      <li>Las intervenciones por sustancia (alcohol, tabaco, drogas) se registran por tipo de intervención, no por instrumento.</li>
+      <li>Un establecimiento sin registros en un año aparece como "sin dato", no como cero. Los establecimientos sin ficha en el maestro (sin coordenadas) cuentan en comunas y servicios, pero no se dibujan en el mapa.</li>
+      <li>Los años parciales se rotulan como tales y no deben compararse con años completos.</li>
+    </ul>
+    <p id="metodologiaAnios" class="nota-rem" style="margin-top:14px;"></p>
+  </div>
+</div>
+
 <footer class="app-footer">
-  <strong>DIVAP</strong> · División de Atención Primaria, Ministerio de Salud de Chile<br>
   Fuente: Registro Estadístico Mensual (REM), consolidado por establecimiento. Actualizado: <span id="footerFecha"></span>
 </footer>
 
@@ -358,7 +456,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 /* =========================================================================
-   Dashboard de Tamizaje de Alcohol y Otras Drogas en APS - DIVAP / MINSAL
+   Dashboard de Tamizaje de Alcohol y Otras Drogas en APS
    Todo el código vive en index.html (requisito: un solo archivo publicado).
    ========================================================================= */
 (function(){
@@ -369,7 +467,17 @@
     rojo:"#C0392B", ambar:"#C9962B", verde:"#1E8074", gris:"#8A8FA3"
   };
 
-  var LOGO_MINSAL_BASE64 = ""; // TODO: reemplazar por el logo real embebido en base64
+  if (window.Chart){
+    Chart.defaults.locale = "es-CL";                          // 100.000 en vez de 100,000
+    Chart.defaults.scales.linear.ticks.maxTicksLimit = 6;     // evita marcas encimadas en el celular
+    Chart.defaults.scales.linear.ticks.callback = function(v){ // 100 mil · 2,5 M (cabe en pantallas angostas)
+      var a = Math.abs(v);
+      if (a >= 1e6) return (v / 1e6).toLocaleString("es-CL", {maximumFractionDigits:1}) + " M";
+      if (a >= 1e4) return Math.round(v / 1e3).toLocaleString("es-CL") + " mil";
+      return v.toLocaleString("es-CL");
+    };
+  }
+
 
   var DATA = null;           // contenido completo de datos.json
   var ESTAB_POR_ID = {};     // id -> establecimiento (para acceso O(1))
@@ -404,6 +512,82 @@
 
   /* ------------------------- carga de datos ------------------------------ */
 
+  /* Formato compacto (v2) de datos.json -----------------------------------
+     est:   [[id, nombre, comuna, ss, tipoEstab, tipoCorto, dependencia, lat, lon], ...]
+     anios: { "2025": { tam|res|int: { SERIE: {f: layout, i: [indices en est], v: [valores planos]} } } }
+     layouts: T = [total] · ES6 = [total, 6 edades, hombres, mujeres]
+              ESX8 = [total, 16 valores (8 tramos de edad × hombre/mujer), SENAME, Mejor Niñez]
+     Aquí se expande a la forma {total, edad{6 tramos}, sexo{hombres,mujeres}, cruz{h[6],m[6]}}. */
+  var N_SUB = {T:1, ES6:9, ESX8:19};
+  var KEYS6 = ["10_14","15_19","20_24","25_44","45_64","65mas"];
+
+  function normalizar(f, v, o){
+    var i, k, edad = {};
+    if (f === "T") return {total: v[o]};
+    if (f === "ES6"){
+      for (k = 0; k < 6; k++) edad[KEYS6[k]] = v[o+1+k];
+      return {total: v[o], edad: edad, sexo: {hombres: v[o+7], mujeres: v[o+8]}};
+    }
+    // ESX8: 8 tramos (10-14, 15-19, 20-24, 25-44, 45-64, 65-69, 70-79, 80+) × (hombre, mujer)
+    var h = [0,0,0,0,0,0], m = [0,0,0,0,0,0], hT = 0, mT = 0;
+    for (i = 0; i < 8; i++){
+      k = i < 5 ? i : 5;               // 65-69, 70-79 y 80+ se agrupan en "65 y más"
+      h[k] += v[o+1+2*i]; m[k] += v[o+2+2*i];
+      hT += v[o+1+2*i];   mT += v[o+2+2*i];
+    }
+    for (k = 0; k < 6; k++) edad[KEYS6[k]] = h[k] + m[k];
+    return {total: v[o], edad: edad, sexo: {hombres: hT, mujeres: mT}, cruz: {h: h, m: m},
+            sub: {sename: v[o+17], mejorNinez: v[o+18]}};
+  }
+
+  function sumarNorm(a, b){
+    if (!a) return b;
+    a.total += b.total;
+    if (a.edad && b.edad){
+      KEYS6.forEach(function(k){ a.edad[k] += b.edad[k]; });
+      a.sexo.hombres += b.sexo.hombres; a.sexo.mujeres += b.sexo.mujeres;
+    } else { delete a.edad; delete a.sexo; }
+    return a;
+  }
+
+  function expandirV2(j){
+    var est = j.est.map(function(e){
+      return {id:e[0], nombre:e[1], comuna:e[2], ss:e[3], tipoEstab:e[4], tipoCorto:e[5], dependencia:e[6], lat:e[7], lon:e[8]};
+    });
+    var out = {meta:j.meta, lookups:j.lookups, series:j.series, establecimientos:est, anios:{}};
+    Object.keys(j.anios).forEach(function(y){
+      var A = j.anios[y], R = {tamizajes:{}, resultados:{}, intervenciones:{}};
+      Object.keys(A.tam).forEach(function(sid){
+        var b = A.tam[sid], n = N_SUB[b.f];
+        b.i.forEach(function(ix, k){
+          var id = est[ix].id;
+          (R.tamizajes[id] = R.tamizajes[id] || {})[sid] = normalizar(b.f, b.v, k*n);
+        });
+      });
+      Object.keys(A.res).forEach(function(sid){
+        var b = A.res[sid], n = N_SUB[b.f], campo = j.series[sid].campo;
+        b.i.forEach(function(ix, k){
+          var id = est[ix].id;
+          (R.resultados[id] = R.resultados[id] || {})[campo] = normalizar(b.f, b.v, k*n);
+        });
+      });
+      Object.keys(A.int).forEach(function(sid){
+        var b = A.int[sid], n = N_SUB[b.f], meta = j.series[sid];
+        b.i.forEach(function(ix, k){
+          var id = est[ix].id, r = (R.intervenciones[id] = R.intervenciones[id] || {});
+          var nr = normalizar(b.f, b.v, k*n);
+          if (meta.sust){
+            r.sust = r.sust || {}; r.sust[meta.tipo] = r.sust[meta.tipo] || {};
+            r.sust[meta.tipo][meta.sust] = (r.sust[meta.tipo][meta.sust] || 0) + nr.total;
+          }
+          r[meta.tipo] = sumarNorm(r[meta.tipo], nr);
+        });
+      });
+      out.anios[y] = R;
+    });
+    return out;
+  }
+
   function cargarDatos(){
     return fetch("./datos.json")
       .then(function(r){
@@ -411,9 +595,17 @@
         return r.json();
       })
       .then(function(json){
-        DATA = json;
+        DATA = json.v === 2 ? expandirV2(json) : json;
         (DATA.establecimientos || []).forEach(function(e){ ESTAB_POR_ID[e.id] = e; });
       });
+  }
+
+  // Años parciales (ej. 2026 enero-septiembre): meta.parcial = {"2026": {"hasta_mes": 9}}
+  var MESES = ["","enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  function esParcial(anio){ return !!(DATA.meta && DATA.meta.parcial && DATA.meta.parcial[String(anio)]); }
+  function etiquetaAnio(anio){
+    if (!esParcial(anio)) return String(anio);
+    return anio + " (ene-" + MESES[DATA.meta.parcial[String(anio)].hasta_mes].slice(0,3) + ", parcial)";
   }
 
   /* ------------------------- construcción filtros ------------------------ */
@@ -440,11 +632,13 @@
     select.innerHTML = "";
     anios.forEach(function(a){
       var o = document.createElement("option");
-      o.value = a; o.textContent = a;
+      o.value = a; o.textContent = etiquetaAnio(a);
       select.appendChild(o);
     });
     estado.anio = anios[anios.length-1]; // por defecto, año más reciente disponible
     select.value = estado.anio;
+    var badge = document.getElementById("badgeAnios");
+    if (badge) badge.textContent = anios.length > 1 ? "Años: " + anios.join(" · ") : String(anios[0]);
   }
 
   // devuelve la lista de establecimientos que cumplen los filtros EXCLUYENDO
@@ -509,7 +703,7 @@
     return establecimientosFiltrados(null);
   }
 
-  function contextoTexto(){
+  function contextoTexto(sinAnio){
     var lk = DATA.lookups;
     var partes = [];
     partes.push(estado.estab ? ESTAB_POR_ID[estado.estab].nombre :
@@ -517,7 +711,7 @@
                 estado.ss !== "" ? lk.ss[estado.ss] : "Chile");
     if (estado.tipo !== "") partes.push(lk.tipoCorto[estado.tipo]);
     if (estado.dependencia !== "") partes.push(lk.dependencia[estado.dependencia]);
-    partes.push("Año " + estado.anio);
+    if (!sinAnio) partes.push("Año " + etiquetaAnio(estado.anio));
     return partes.join(" · ");
   }
 
@@ -527,20 +721,28 @@
     return (DATA.anios || {})[String(anio)] || null;
   }
 
+  // Los valores en datos.json pueden venir como número plano (años sin
+  // desagregar, ej. 2015), o como objeto {total, edad, sexo} (años con
+  // desagregación por edad/sexo, ej. 2014 en adelante), o como {EMP, EMPAM}
+  // (contexto de aplicación). Esta función normaliza cualquiera de los tres
+  // formatos a un número.
+  function valorTotal(v){
+    if (v === undefined || v === null) return 0;
+    if (typeof v === "number") return v;
+    if (typeof v === "object"){
+      if (v.total !== undefined) return v.total || 0;
+      if (v.EMP !== undefined || v.EMPAM !== undefined) return (v.EMP||0) + (v.EMPAM||0);
+    }
+    return 0;
+  }
+
   function totalTamizajesEstab(estId, anio){
     var da = datosAnio(anio);
     if (!da || !da.tamizajes) return 0;
     var reg = da.tamizajes[String(estId)];
     if (!reg) return 0;
     var total = 0;
-    Object.keys(reg).forEach(function(instr){
-      var v = reg[instr];
-      if (typeof v === "object" && v !== null){
-        total += (v.total !== undefined ? (v.total || 0) : ((v.EMP||0)+(v.EMPAM||0)));
-      } else {
-        total += (v || 0);
-      }
-    });
+    Object.keys(reg).forEach(function(instr){ total += valorTotal(reg[instr]); });
     return total;
   }
 
@@ -551,9 +753,9 @@
     var r = da.resultados[String(estId)];
     if (!r) return def;
     return {
-      bajoRiesgo: r.bajoRiesgo || 0,
-      consumoRiesgoso: r.consumoRiesgoso || 0,
-      consumoPerjudicial: r.consumoPerjudicial || 0
+      bajoRiesgo: valorTotal(r.bajoRiesgo),
+      consumoRiesgoso: valorTotal(r.consumoRiesgoso),
+      consumoPerjudicial: valorTotal(r.consumoPerjudicial)
     };
   }
 
@@ -564,9 +766,9 @@
     var r = da.intervenciones[String(estId)];
     if (!r) return def;
     return {
-      minimas: r.minimas || 0,
-      breves: r.breves || 0,
-      referencias: r.referencias || 0
+      minimas: valorTotal(r.minimas),
+      breves: valorTotal(r.breves),
+      referencias: valorTotal(r.referencias)
     };
   }
 
@@ -575,10 +777,13 @@
       tamizajesTotal:0,
       resultados:{bajoRiesgo:0, consumoRiesgoso:0, consumoPerjudicial:0},
       intervenciones:{minimas:0, breves:0, referencias:0},
-      nEstablecimientos: lista.length
+      nEstablecimientos: 0,           // establecimientos con tamizajes en el año
+      nEnFiltro: lista.length         // establecimientos del filtro, tengan o no dato
     };
     lista.forEach(function(e){
-      out.tamizajesTotal += totalTamizajesEstab(e.id, anio);
+      var tz = totalTamizajesEstab(e.id, anio);
+      if (tz > 0) out.nEstablecimientos++;
+      out.tamizajesTotal += tz;
       var r = resultadosEstab(e.id, anio);
       out.resultados.bajoRiesgo += r.bajoRiesgo;
       out.resultados.consumoRiesgoso += r.consumoRiesgoso;
@@ -602,7 +807,8 @@
       {label:"Tamizajes aplicados", valor:fmtNum(agr.tamizajesTotal), sub:"Total instrumentos, año "+estado.anio, clase:""},
       {label:"Resultados en riesgo", valor:fmtPct(pctRiesgo), sub:"Consumo riesgoso + perjudicial/dependencia", clase:"rojo"},
       {label:"Intervenciones realizadas", valor:fmtNum(totalIntervenciones), sub:"Mínimas + breves + referencias asistidas", clase:"acento"},
-      {label:"Establecimientos con datos", valor:fmtNum(agr.nEstablecimientos), sub:"Dentro del filtro activo", clase:"verde"}
+      {label:"Referencias asistidas", valor:fmtNum(agr.intervenciones.referencias), sub:"Derivación a tratamiento especializado", clase:"rojo"},
+      {label:"Establecimientos con datos", valor:fmtNum(agr.nEstablecimientos), sub:"Con tamizajes en el año, dentro del filtro activo", clase:"verde"}
     ];
 
     var grid = document.getElementById("kpiGrid");
@@ -668,7 +874,7 @@
       tituloNivel = "por Servicio de Salud";
     }
 
-    document.getElementById("tituloChartDrill").textContent = "Tamizajes AUDIT/ASSIST/CRAFFT aplicados " + tituloNivel;
+    document.getElementById("tituloChartDrill").textContent = "Tamizajes aplicados (total de instrumentos) " + tituloNivel;
     document.getElementById("subChartDrill").textContent = contextoTexto();
 
     destruirChart("chartDrill");
@@ -728,30 +934,282 @@
     });
   }
 
+  var RANGOS_EDAD = KEYS6;
+  var RANGOS_EDAD_LABEL = {"10_14":"10-14","15_19":"15-19","20_24":"20-24","25_44":"25-44","45_64":"45-64","65mas":"65 y más"};
+
+  function limpiarCanvas(id){
+    var c = document.getElementById(id).getContext("2d");
+    c.clearRect(0, 0, c.canvas.width, c.canvas.height);
+  }
+
+  // Suma edad/sexo de todas las series de tamizaje del año para los establecimientos dados.
+  // cruz = true solo si TODAS las series incluidas traen el cruce edad × sexo (REM 2025 en adelante).
+  function agregarEdadSexoTamizajes(lista, anio){
+    var da = datosAnio(anio);
+    var edad = {}; RANGOS_EDAD.forEach(function(r){ edad[r] = 0; });
+    var sexo = {hombres:0, mujeres:0};
+    var cruzH = [0,0,0,0,0,0], cruzM = [0,0,0,0,0,0];
+    var disponible = false, cruzCompleto = true;
+    if (da && da.tamizajes){
+      lista.forEach(function(e){
+        var reg = da.tamizajes[e.id];
+        if (!reg) return;
+        Object.keys(reg).forEach(function(sid){
+          var v = reg[sid];
+          if (v && v.edad){
+            disponible = true;
+            RANGOS_EDAD.forEach(function(r){ edad[r] += v.edad[r] || 0; });
+            sexo.hombres += v.sexo.hombres || 0;
+            sexo.mujeres += v.sexo.mujeres || 0;
+            if (v.cruz){ for (var k = 0; k < 6; k++){ cruzH[k] += v.cruz.h[k]; cruzM[k] += v.cruz.m[k]; } }
+            else cruzCompleto = false;
+          }
+        });
+      });
+    }
+    return {edad:edad, sexo:sexo, cruzH:cruzH, cruzM:cruzM, disponible:disponible, cruz:disponible && cruzCompleto};
+  }
+
+  function renderChartSexoEdad(lista){
+    var datos = agregarEdadSexoTamizajes(lista, estado.anio);
+    var subEl = document.getElementById("subChartSexoEdad");
+    destruirChart("chartSexoEdad");
+
+    if (!datos.disponible){
+      limpiarCanvas("chartSexoEdad");
+      subEl.textContent = "El REM " + estado.anio + " no trae desglose por sexo y edad para estos datos.";
+      return;
+    }
+    var labels = RANGOS_EDAD.map(function(r){ return RANGOS_EDAD_LABEL[r]; });
+    var ctx = document.getElementById("chartSexoEdad").getContext("2d");
+
+    if (datos.cruz){
+      subEl.textContent = contextoTexto() + " · edad × sexo";
+      CHARTS.chartSexoEdad = new Chart(ctx, {
+        type:"bar",
+        data:{ labels: labels, datasets:[
+          {label:"Hombres", data:datos.cruzH, backgroundColor:COLORES.azul, borderRadius:3},
+          {label:"Mujeres", data:datos.cruzM, backgroundColor:COLORES.acento, borderRadius:3}
+        ]},
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{position:"bottom", labels:{boxWidth:12, font:{size:11}}} },
+          scales:{ y:{beginAtZero:true} }
+        }
+      });
+      return;
+    }
+    // Años anteriores: edad y sexo son dos aperturas independientes del mismo total.
+    subEl.textContent = contextoTexto() + " · en este año el REM no cruza edad con sexo";
+    CHARTS.chartSexoEdad = new Chart(ctx, {
+      type:"bar",
+      data:{ labels: labels, datasets:[{
+        label:"Tamizajes por rango etario",
+        data: RANGOS_EDAD.map(function(r){ return datos.edad[r]; }),
+        backgroundColor: COLORES.azul, borderRadius:4
+      }]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{ callbacks:{ afterBody:function(){
+            return ["", "Por sexo (total del año, no cruzado con edad):", "Hombres: "+fmtNum(datos.sexo.hombres), "Mujeres: "+fmtNum(datos.sexo.mujeres)];
+          }}}
+        },
+        scales:{ y:{beginAtZero:true} }
+      }
+    });
+  }
+
+  /* ------------------ instrumento y contexto de aplicación ------------------ */
+
+  var ORDEN_SERIES = ["AUDIT_TOT","AUDIT_EMP","AUDIT_APL","ASSIST_EMP","ASSIST_APL","ASSISTCRAFFT_EMP","ASSISTCRAFFT_APL","CRAFFT_CTRL","CRAFFT_EMP","CRAFFT_APL"];
+  var COLOR_INSTR = {AUDIT:COLORES.azul, ASSIST:COLORES.acento, CRAFFT:COLORES.verde, "ASSIST/CRAFFT":"#9A7BB5"};
+
+  function notaRem(anio){
+    anio = Number(anio);
+    if (anio <= 2015) return "En 2014-2015 el REM solo registra AUDIT (total); no distingue contexto ni otros instrumentos.";
+    if (anio <= 2017) return "En 2016-2017 ASSIST y CRAFFT se registran juntos en una sola fila.";
+    if (anio === 2018) return "Desde 2018 ASSIST y CRAFFT se registran por separado.";
+    if (anio === 2019) return "Desde 2019 se agrega la fila ASSIST/CRAFFT en EMP/EMPAM.";
+    if (anio < 2025) return "Desde 2020 la fila EMP/EMPAM es solo ASSIST y el REM separa CRAFFT en el Control de Salud Integral del Adolescente.";
+    return "Desde 2025 el REM separa CRAFFT en EMP (tres filas de CRAFFT). Cada fila difiere solo en el contexto de aplicación.";
+  }
+
+  // parte una etiqueta larga en varias líneas (Chart.js acepta arreglos como etiqueta multilínea)
+  function partirEtiqueta(texto, max){
+    var palabras = String(texto).split(" "), lineas = [], actual = "";
+    palabras.forEach(function(p){
+      if (actual && (actual + " " + p).length > max){ lineas.push(actual); actual = p; }
+      else actual = actual ? actual + " " + p : p;
+    });
+    if (actual) lineas.push(actual);
+    return lineas.length > 1 ? lineas : lineas[0];
+  }
+
+  function totalesPorSerie(lista, anio){
+    var da = datosAnio(anio), tot = {};
+    if (!da || !da.tamizajes) return tot;
+    lista.forEach(function(e){
+      var reg = da.tamizajes[e.id];
+      if (!reg) return;
+      Object.keys(reg).forEach(function(sid){ tot[sid] = (tot[sid] || 0) + valorTotal(reg[sid]); });
+    });
+    return tot;
+  }
+
+  function renderChartInstrumentos(lista){
+    var tot = totalesPorSerie(lista, estado.anio);
+    var ids = Object.keys(tot).filter(function(s){ return tot[s] > 0; });
+    ids.sort(function(a, b){
+      var ia = ORDEN_SERIES.indexOf(a), ib = ORDEN_SERIES.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    document.getElementById("subChartInstrumentos").textContent = contextoTexto();
+    document.getElementById("notaChartInstrumentos").textContent = notaRem(estado.anio);
+    destruirChart("chartInstrumentos");
+    if (!ids.length){ limpiarCanvas("chartInstrumentos"); return; }
+    var info = function(s){ return (DATA.series && DATA.series[s]) || {nombre:s, instr:""}; };
+    var ctx = document.getElementById("chartInstrumentos").getContext("2d");
+    CHARTS.chartInstrumentos = new Chart(ctx, {
+      type:"bar",
+      data:{
+        labels: ids.map(function(s){ return partirEtiqueta(info(s).nombre, 26); }),
+        datasets:[{
+          data: ids.map(function(s){ return tot[s]; }),
+          backgroundColor: ids.map(function(s){ return COLOR_INSTR[info(s).instr] || COLORES.gris; }),
+          borderRadius:4
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false, indexAxis:"y",
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return fmtNum(c.parsed.x) + " tamizajes"; } } } },
+        scales:{ x:{beginAtZero:true}, y:{ticks:{font:{size:11}}} }
+      }
+    });
+  }
+
+  /* --------------------- intervenciones por sustancia ---------------------- */
+
+  var SUSTANCIAS = [["alcohol","Alcohol",COLORES.azul], ["tabaco","Tabaco",COLORES.ambar], ["drogas","Drogas",COLORES.acento]];
+  var TIPOS_INT = [["minimas",["Mínima","(bajo riesgo)"]], ["breves",["Breve o motivacional","(riesgo)"]], ["referencias",["Referencia asistida","(perjudicial o dependencia)"]]];
+
+  function sustanciaPorTipo(lista, anio){
+    var da = datosAnio(anio), out = {}, disp = false;
+    TIPOS_INT.forEach(function(t){ out[t[0]] = {alcohol:0, tabaco:0, drogas:0}; });
+    if (da && da.intervenciones){
+      lista.forEach(function(e){
+        var r = da.intervenciones[e.id];
+        if (!r || !r.sust) return;
+        disp = true;
+        TIPOS_INT.forEach(function(t){
+          if (r.sust[t[0]]) SUSTANCIAS.forEach(function(s){ out[t[0]][s[0]] += r.sust[t[0]][s[0]] || 0; });
+        });
+      });
+    }
+    return {datos:out, disponible:disp};
+  }
+
+  function renderChartSustancia(lista){
+    var res = sustanciaPorTipo(lista, estado.anio);
+    var subEl = document.getElementById("subChartSustancia");
+    destruirChart("chartSustancia");
+    if (!res.disponible){
+      limpiarCanvas("chartSustancia");
+      subEl.textContent = "La apertura por sustancia está disponible desde 2016 (REM A27). Año " + estado.anio + ": solo tipo de intervención.";
+      return;
+    }
+    subEl.textContent = contextoTexto() + " · % dentro de cada tipo";
+    var totTipo = TIPOS_INT.map(function(t){
+      var d = res.datos[t[0]]; return d.alcohol + d.tabaco + d.drogas;
+    });
+    var ctx = document.getElementById("chartSustancia").getContext("2d");
+    CHARTS.chartSustancia = new Chart(ctx, {
+      type:"bar",
+      data:{
+        labels: TIPOS_INT.map(function(t, i){ return t[1].concat("n = " + fmtNum(totTipo[i])); }),
+        datasets: SUSTANCIAS.map(function(s){
+          return {
+            label:s[1], backgroundColor:s[2],
+            data: TIPOS_INT.map(function(t, i){ return totTipo[i] > 0 ? res.datos[t[0]][s[0]] / totTipo[i] * 100 : 0; }),
+            conteo: TIPOS_INT.map(function(t){ return res.datos[t[0]][s[0]]; })
+          };
+        })
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false, indexAxis:"y",
+        plugins:{
+          legend:{position:"bottom", labels:{boxWidth:12, font:{size:11}}},
+          tooltip:{ callbacks:{ label:function(c){
+            return c.dataset.label + ": " + fmtPct(c.parsed.x) + " (" + fmtNum(c.dataset.conteo[c.dataIndex]) + ")";
+          }}}
+        },
+        scales:{ x:{stacked:true, max:100, ticks:{callback:function(v){ return v + "%"; }}}, y:{stacked:true, ticks:{font:{size:11}}} }
+      }
+    });
+  }
+
+  /* ------------------------- ranking de comunas ---------------------------- */
+
+  function renderChartTopComunas(){
+    var lk = DATA.lookups, g = {};
+    establecimientosActivos().forEach(function(e){
+      g[e.comuna] = (g[e.comuna] || 0) + totalTamizajesEstab(e.id, estado.anio);
+    });
+    var arr = Object.keys(g).map(function(k){ return {label:lk.comunas[k], valor:g[k]}; })
+      .filter(function(x){ return x.valor > 0; })
+      .sort(function(a, b){ return b.valor - a.valor; }).slice(0, 20);
+    document.getElementById("subChartTopComunas").textContent = contextoTexto() + " · total de instrumentos";
+    destruirChart("chartTopComunas");
+    if (!arr.length){ limpiarCanvas("chartTopComunas"); return; }
+    var ctx = document.getElementById("chartTopComunas").getContext("2d");
+    CHARTS.chartTopComunas = new Chart(ctx, {
+      type:"bar",
+      data:{ labels: arr.map(function(x){ return x.label; }),
+             datasets:[{ data: arr.map(function(x){ return x.valor; }), backgroundColor: COLORES.azul, borderRadius:3 }] },
+      options:{
+        responsive:true, maintainAspectRatio:false, indexAxis:"y",
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return fmtNum(c.parsed.x) + " tamizajes"; } } } },
+        scales:{ x:{beginAtZero:true}, y:{ticks:{autoSkip:false, font:{size:10.5}}} }
+      }
+    });
+  }
+
+  /* ------------------------------ serie anual ------------------------------- */
+
   function renderChartSerie(){
     var anios = aniosDisponibles();
     var lista = establecimientosActivos();
-    var valores = anios.map(function(a){
+    // eje con todos los años entre el primero y el último; los años sin datos cargados quedan como corte
+    var desde = anios[0], hasta = anios[anios.length-1], labels = [], valores = [], colores = [];
+    for (var a = desde; a <= hasta; a++){
+      labels.push(a);
+      if (anios.indexOf(a) < 0){ valores.push(null); colores.push(COLORES.acento); continue; }
       var total = 0;
       lista.forEach(function(e){ total += totalTamizajesEstab(e.id, a); });
-      return total;
-    });
-    document.getElementById("subChartSerie").textContent = contextoTexto().replace(/Año \d+/, "todos los años");
+      valores.push(total);
+      colores.push(esParcial(a) ? COLORES.ambar : COLORES.acento);
+    }
+    var sinCargar = labels.length - anios.length;
+    document.getElementById("subChartSerie").textContent = contextoTexto(true) + " · total de instrumentos" +
+      (sinCargar > 0 ? " · años sin datos cargados aún: se muestran como corte" : "");
     destruirChart("chartSerie");
     var ctx = document.getElementById("chartSerie").getContext("2d");
     CHARTS.chartSerie = new Chart(ctx, {
       type:"line",
       data:{
-        labels: anios,
+        labels: labels,
         datasets:[{
-          label:"Tamizajes totales", data: valores,
+          label:"Tamizajes totales", data: valores, spanGaps:false,
           borderColor: COLORES.acento, backgroundColor: "rgba(107,45,138,0.12)",
-          fill:true, tension:.25, pointRadius:4, pointBackgroundColor: COLORES.acento
+          fill:true, tension:.25, pointRadius:5, pointBackgroundColor: colores
         }]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{display:false} },
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){
+          return fmtNum(c.parsed.y) + " tamizajes" + (esParcial(c.label) ? " (año parcial)" : "");
+        }}}},
         scales:{ y:{beginAtZero:true} }
       }
     });
@@ -781,12 +1239,16 @@
     if (!MAPA) return;
     MAPA_CAPAS.clearLayers();
     var lista = establecimientosActivos();
-    var bounds = [];
+    var bounds = [], sinCoord = 0, maxTam = 0;
+    lista.forEach(function(e){ var t = totalTamizajesEstab(e.id, estado.anio); if (t > maxTam) maxTam = t; });
     lista.forEach(function(e){
-      if (e.lat === null || e.lon === null || e.lat === undefined || e.lon === undefined) return;
+      if (e.lat === null || e.lon === null || e.lat === undefined || e.lon === undefined){
+        if (totalTamizajesEstab(e.id, estado.anio) > 0) sinCoord++;
+        return;
+      }
       var tam = totalTamizajesEstab(e.id, estado.anio);
       var res = resultadosEstab(e.id, estado.anio);
-      var radio = 4 + Math.min(16, Math.sqrt(tam) * 0.6);
+      var radio = 4 + 14 * Math.sqrt(maxTam > 0 ? tam / maxTam : 0);   // relativo al mayor del filtro actual
       var marker = L.circleMarker([e.lat, e.lon], {
         radius: radio, color: colorPorRiesgo(res), fillColor: colorPorRiesgo(res),
         fillOpacity:0.65, weight:1.5
@@ -800,6 +1262,8 @@
       MAPA_CAPAS.addLayer(marker);
       bounds.push([e.lat, e.lon]);
     });
+    document.getElementById("mapaSinCoord").textContent = sinCoord > 0
+      ? sinCoord + " establecimiento(s) con tamizajes no se dibujan: sin coordenadas en el maestro." : "";
     if (bounds.length){
       try { MAPA.fitBounds(bounds, {padding:[20,20], maxZoom:11}); } catch(e){}
     }
@@ -869,7 +1333,7 @@
     cont.innerHTML =
       "<div class='ficha-header'>"+
         "<div class='ficha-cabecera-flex'>"+
-          "<div><h2>"+nombreFicha()+"</h2><p>Año "+estado.anio+" · "+fmtNum(agr.nEstablecimientos)+" establecimiento(s) considerado(s)</p></div>"+
+          "<div><h2>"+nombreFicha()+"</h2><p>Año "+estado.anio+" · "+fmtNum(agr.nEstablecimientos)+" de "+fmtNum(agr.nEnFiltro)+" establecimiento(s) con tamizajes</p></div>"+
         "</div>"+
       "</div>"+
       "<div class='kpi-grid' id='fichaKPIs'></div>"+
@@ -884,7 +1348,7 @@
       {label:"Tamizajes aplicados", valor:fmtNum(agr.tamizajesTotal), clase:""},
       {label:"% en riesgo", valor:fmtPct(pctRiesgo), clase:"rojo"},
       {label:"Intervenciones totales", valor:fmtNum(agr.intervenciones.minimas+agr.intervenciones.breves+agr.intervenciones.referencias), clase:"acento"},
-      {label:"Establecimientos", valor:fmtNum(agr.nEstablecimientos), clase:"verde"}
+      {label:"Establecimientos con tamizajes", valor:fmtNum(agr.nEstablecimientos), clase:"verde"}
     ];
     var grid = document.getElementById("fichaKPIs");
     kpis.forEach(function(k){
@@ -926,42 +1390,50 @@
     document.body.removeChild(link);
   }
 
+  function lineasAjustadas(ctx, texto, anchoMax){
+    var palabras = String(texto).split(/\s+/), lineas = [], actual = "";
+    palabras.forEach(function(p){
+      var prueba = actual ? actual + " " + p : p;
+      if (ctx.measureText(prueba).width > anchoMax && actual){ lineas.push(actual); actual = p; }
+      else actual = prueba;
+    });
+    if (actual) lineas.push(actual);
+    return lineas;
+  }
+
   function exportarChartPNG(idCanvas, titulo, subtitulo){
     var chart = CHARTS[idCanvas];
     if (!chart) return;
-    var srcCanvas = chart.canvas; // ya viene renderizado a devicePixelRatio (alta resolución)
-    var padTop = 78, padBottom = 46, padSide = 24;
-    var w = srcCanvas.width + padSide*2;
-    var h = srcCanvas.height + padTop + padBottom;
+    var src = chart.canvas;               // ya viene renderizado a devicePixelRatio (alta resolución)
+    var padSide = 28, padBottom = 54;
+    var W = Math.max(src.width + padSide*2, 820);
+    var medida = document.createElement("canvas").getContext("2d");
+    var anchoTexto = W - padSide*2;
+    medida.font = "bold 22px -apple-system, Arial, sans-serif";
+    var lTitulo = lineasAjustadas(medida, titulo, anchoTexto);
+    medida.font = "14px -apple-system, Arial, sans-serif";
+    var lSub = lineasAjustadas(medida, subtitulo, anchoTexto);
+    var altoCab = 18 + lTitulo.length*28 + lSub.length*19 + 14;
+    var H = altoCab + src.height + padBottom;
 
     var out = document.createElement("canvas");
-    out.width = w; out.height = h;
+    out.width = W; out.height = H;
     var ctx = out.getContext("2d");
+    ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = COLORES.azulOscuro; ctx.fillRect(0, 0, W, 6);   // barra institucional
 
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0,0,w,h);
+    var y = 18;
+    ctx.fillStyle = "#1B1F3B"; ctx.font = "bold 22px -apple-system, Arial, sans-serif"; ctx.textBaseline = "top";
+    lTitulo.forEach(function(l){ ctx.fillText(l, padSide, y); y += 28; });
+    ctx.fillStyle = "#4A4E63"; ctx.font = "14px -apple-system, Arial, sans-serif";
+    lSub.forEach(function(l){ ctx.fillText(l, padSide, y); y += 19; });
 
-    // barra superior institucional
-    ctx.fillStyle = COLORES.azulOscuro;
-    ctx.fillRect(0,0,w,6);
+    ctx.drawImage(src, Math.round((W - src.width)/2), altoCab, src.width, src.height);
 
-    ctx.fillStyle = "#1B1F3B";
-    ctx.font = "bold 20px -apple-system, Arial, sans-serif";
-    ctx.fillText(titulo, padSide, 34);
-
-    ctx.fillStyle = "#6B7280";
-    ctx.font = "13px -apple-system, Arial, sans-serif";
-    ctx.fillText(subtitulo, padSide, 54);
-
-    ctx.drawImage(srcCanvas, padSide, padTop, srcCanvas.width, srcCanvas.height);
-
-    // pie institucional
-    ctx.fillStyle = COLORES.acento;
-    ctx.fillRect(0, h-padBottom, w, 3);
-    ctx.fillStyle = "#6B7280";
-    ctx.font = "11px -apple-system, Arial, sans-serif";
-    ctx.fillText("DIVAP · Ministerio de Salud de Chile — Dashboard de Tamizaje de Alcohol y Otras Drogas en APS", padSide, h-22);
-    ctx.fillText("Generado el " + hoyISO(), padSide, h-8);
+    ctx.fillStyle = COLORES.acento; ctx.fillRect(0, H - padBottom + 6, W, 3);   // pie institucional
+    ctx.fillStyle = "#4A4E63"; ctx.font = "12px -apple-system, Arial, sans-serif";
+    ctx.fillText("Dashboard de Tamizaje de Alcohol y Otras Drogas en APS · Fuente: REM", padSide, H - padBottom + 18);
+    ctx.fillText("Fuente: REM Serie A · Generado el " + hoyISO(), padSide, H - padBottom + 35);
 
     descargarCanvas(out, slug(titulo) + "_" + estado.anio + ".png");
   }
@@ -995,7 +1467,7 @@
 
     ctx.fillStyle = COLORES.acento; ctx.fillRect(0, h-26, w, 3);
     ctx.fillStyle = "#6B7280"; ctx.font = "11px -apple-system, Arial, sans-serif";
-    ctx.fillText("DIVAP · Ministerio de Salud de Chile — Generado el " + hoyISO(), padSide, h-8);
+    ctx.fillText("Dashboard de Tamizaje de Alcohol y Otras Drogas en APS — Generado el " + hoyISO(), padSide, h-8);
 
     descargarCanvas(out, "ficha_" + slug(nombre) + "_" + estado.anio + ".png");
   }
@@ -1029,7 +1501,11 @@
     renderChartDrill();
     renderChartResultados(agr);
     renderChartIntervenciones(agr);
+    renderChartInstrumentos(lista);
     renderChartSerie();
+    renderChartSexoEdad(lista);
+    renderChartSustancia(lista);
+    renderChartTopComunas();
 
     if (MAPA) renderMapa();
 
@@ -1062,7 +1538,10 @@
         var titulo = document.getElementById("titulo"+id.charAt(0).toUpperCase()+id.slice(1))
           ? document.getElementById("titulo"+id.charAt(0).toUpperCase()+id.slice(1)).textContent
           : btn.closest(".chart-card").querySelector("h3").textContent;
-        var sub = btn.closest(".chart-card").querySelector(".chart-sub").textContent;
+        var card = btn.closest(".chart-card");
+        var sub = card.querySelector(".chart-sub").textContent;
+        var nota = card.querySelector(".nota-rem");
+        if (nota && nota.textContent) sub += " · " + nota.textContent;
         exportarChartPNG(id, titulo, sub);
       });
     });
@@ -1070,31 +1549,32 @@
     document.getElementById("fichaNivel").addEventListener("change", function(){ poblarFichaEntidad(); renderFicha(); });
     document.getElementById("fichaEntidad").addEventListener("change", function(){ renderFicha(); });
     document.getElementById("btnFichaPNG").addEventListener("click", exportarFichaPNG);
-  }
 
-  function insertarLogo(){
-    var wrap = document.getElementById("logoWrap");
-    if (LOGO_MINSAL_BASE64){
-      var img = document.createElement("img");
-      img.src = LOGO_MINSAL_BASE64;
-      img.alt = "Logo MINSAL";
-      wrap.appendChild(img);
-    } else {
-      wrap.innerHTML = "<span style='font-size:9px;font-weight:800;color:#25306B;text-align:center;line-height:1.1;'>MINSAL</span>";
-    }
+    var modal = document.getElementById("modalMetodologia");
+    var cerrar = function(){ modal.classList.remove("abierto"); };
+    document.getElementById("btnMetodologia").addEventListener("click", function(){
+      document.getElementById("metodologiaAnios").textContent =
+        "Años con datos cargados: " + aniosDisponibles().map(etiquetaAnio).join(", ") + ". Los demás años se incorporan a medida que se consolidan.";
+      modal.classList.add("abierto");
+    });
+    document.getElementById("btnCerrarMetodologia").addEventListener("click", cerrar);
+    modal.addEventListener("click", function(ev){ if (ev.target === modal) cerrar(); });
+    document.addEventListener("keydown", function(ev){ if (ev.key === "Escape") cerrar(); });
   }
 
   /* --------------------------------- init -------------------------------------- */
 
   document.addEventListener("DOMContentLoaded", function(){
     cargarDatos().then(function(){
-      insertarLogo();
       inicializarFiltroAnio();
       document.getElementById("footerFecha").textContent = DATA.meta && DATA.meta.actualizado ? DATA.meta.actualizado : hoyISO();
       bindEventos();
       renderTodo();
     }).catch(function(err){
-      document.querySelector("main").innerHTML = "<div class='estado-vacio'>No se pudieron cargar los datos (" + err.message + "). Verifique que datos.json esté publicado junto a index.html.</div>";
+      var enArchivo = location.protocol === "file:";
+      document.querySelector("main").innerHTML = "<div class='estado-vacio'>" + (enArchivo
+        ? "Este dashboard no puede abrirse con doble clic sobre el archivo: el navegador bloquea la lectura de datos.json. Ábralo desde la dirección publicada en GitHub Pages o con un servidor local (python3 -m http.server)."
+        : "No se pudieron cargar los datos (" + err.message + "). Verifique que datos.json esté publicado junto a index.html.") + "</div>";
       console.error(err);
     });
   });
