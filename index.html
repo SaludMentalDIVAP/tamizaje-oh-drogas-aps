@@ -151,6 +151,7 @@
   .chart-card.principal h3{font-size:18px;}
   .chart-card.principal .chart-sub{font-size:12.5px;}
   .chart-canvas-wrap.alto{height:400px;}
+  .chart-canvas-wrap.alto2{height:300px;}
 
   #mapa{height:520px;border-radius:var(--radio);box-shadow:var(--sombra);overflow:hidden;}
   .mapa-leyenda{
@@ -307,6 +308,39 @@
           <button class="btn-png" data-target="chartSerie">⬇ PNG</button>
         </div>
         <div class="chart-canvas-wrap alto"><canvas id="chartSerie"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3>Evolución: Intervenciones mínimas por año</h3>
+            <p class="chart-sub" id="subChartIntMin"></p>
+          </div>
+          <button class="btn-png" data-target="chartIntMin">⬇ PNG</button>
+        </div>
+        <div class="chart-canvas-wrap alto2"><canvas id="chartIntMin"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3>Evolución: Intervenciones breves por año</h3>
+            <p class="chart-sub" id="subChartIntBre"></p>
+          </div>
+          <button class="btn-png" data-target="chartIntBre">⬇ PNG</button>
+        </div>
+        <div class="chart-canvas-wrap alto2"><canvas id="chartIntBre"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3>Evolución: Referencias asistidas por año</h3>
+            <p class="chart-sub" id="subChartIntRef"></p>
+          </div>
+          <button class="btn-png" data-target="chartIntRef">⬇ PNG</button>
+        </div>
+        <div class="chart-canvas-wrap alto2"><canvas id="chartIntRef"></canvas></div>
       </div>
 
       <div class="chart-card">
@@ -509,7 +543,7 @@
   }
   function fmtCompacto(n){
     if (n >= 1e6) return (n/1e6).toLocaleString("es-CL",{maximumFractionDigits:2}) + " M";
-    if (n >= 1e3) return Math.round(n/1e3).toLocaleString("es-CL") + " mil";
+    if (n >= 1e3) return (n < 1e5 ? (n/1e3).toLocaleString("es-CL",{maximumFractionDigits:1}) : Math.round(n/1e3).toLocaleString("es-CL")) + " mil";
     return String(n);
   }
   function fmtPct(n){
@@ -1222,6 +1256,28 @@
 
   /* ------------------------------ serie anual ------------------------------- */
 
+  var PLUGIN_ETIQUETAS = {
+    id:"etiquetasValor",
+    afterDatasetsDraw:function(chart){
+      var meta = chart.getDatasetMeta(0), ds = chart.data.datasets[0], c = chart.ctx;
+      var angosto = chart.width < 700;
+      c.save();
+      c.font = "700 " + (angosto ? 11 : 15) + "px Inter, system-ui, sans-serif";
+      c.fillStyle = COLORES.azulOscuro; c.textAlign = "center"; c.textBaseline = "bottom";
+      meta.data.forEach(function(pt, i){
+        var v = ds.data[i];
+        if (v === null || v === undefined) return;
+        if (angosto && i % 2 === (meta.data.length - 1) % 2 ? false : angosto) return;  // en pantallas angostas, un año por medio (siempre el último)
+        var txt = angosto ? fmtCompacto(v) : fmtNum(v);
+        if (esParcial(chart.data.labels[i])) txt += "*";
+        var x = Math.min(Math.max(pt.x, c.measureText(txt).width/2 + 2), chart.width - c.measureText(txt).width/2 - 2);
+        c.lineWidth = 4; c.strokeStyle = "#fff"; c.lineJoin = "round"; c.strokeText(txt, x, pt.y - 10);
+        c.fillText(txt, x, pt.y - 10);
+      });
+      c.restore();
+    }
+  };
+
   function renderChartSerie(){
     var anios = aniosDisponibles();
     var lista = establecimientosActivos();
@@ -1264,27 +1320,52 @@
           y:{beginAtZero:true, grace:"8%"}
         }
       },
-      plugins:[{
-        id:"etiquetasValor",
-        afterDatasetsDraw:function(chart){
-          var meta = chart.getDatasetMeta(0), ds = chart.data.datasets[0], c = chart.ctx;
-          var angosto = chart.width < 700;
-          c.save();
-          c.font = "700 " + (angosto ? 11 : 15) + "px Inter, system-ui, sans-serif";
-          c.fillStyle = COLORES.azulOscuro; c.textAlign = "center"; c.textBaseline = "bottom";
-          meta.data.forEach(function(pt, i){
-            var v = ds.data[i];
-            if (v === null || v === undefined) return;
-            if (angosto && i % 2 === (meta.data.length - 1) % 2 ? false : angosto) return;  // en pantallas angostas, un año por medio (siempre el último)
-            var txt = angosto ? fmtCompacto(v) : fmtNum(v);
-            if (esParcial(chart.data.labels[i])) txt += "*";
-            var x = Math.min(Math.max(pt.x, c.measureText(txt).width/2 + 2), chart.width - c.measureText(txt).width/2 - 2);
-            c.lineWidth = 4; c.strokeStyle = "#fff"; c.lineJoin = "round"; c.strokeText(txt, x, pt.y - 10);
-            c.fillText(txt, x, pt.y - 10);
-          });
-          c.restore();
-        }
-      }]
+      plugins:[PLUGIN_ETIQUETAS]
+    });
+  }
+
+  /* ------------------ evolución anual de intervenciones ------------------ */
+
+  var SERIES_INT = [
+    {campo:"minimas",     canvas:"chartIntMin", sub:"subChartIntMin", nombre:"Intervenciones mínimas",  color:"#25306B", fondo:"rgba(37,48,107,0.10)"},
+    {campo:"breves",      canvas:"chartIntBre", sub:"subChartIntBre", nombre:"Intervenciones breves",   color:"#005F9E", fondo:"rgba(0,95,158,0.10)"},
+    {campo:"referencias", canvas:"chartIntRef", sub:"subChartIntRef", nombre:"Referencias asistidas",   color:"#6B2D8C", fondo:"rgba(107,45,138,0.12)"}
+  ];
+
+  function renderChartsSerieIntervenciones(){
+    var anios = aniosDisponibles(), lista = establecimientosActivos();
+    var desde = anios[0], hasta = anios[anios.length-1];
+    SERIES_INT.forEach(function(S){
+      var labels = [], valores = [], colores = [];
+      for (var a = desde; a <= hasta; a++){
+        labels.push(a);
+        if (anios.indexOf(a) < 0){ valores.push(null); colores.push(S.color); continue; }
+        var t = 0;
+        lista.forEach(function(e){ t += intervencionesEstab(e.id, a)[S.campo]; });
+        valores.push(t);
+        colores.push(esParcial(a) ? COLORES.ambar : S.color);
+      }
+      var parcial = anios.filter(esParcial)[0];
+      document.getElementById(S.sub).textContent = contextoTexto(true, true) + NOTA_TODOS() +
+        (parcial ? " · * año parcial: datos de enero a " + MESES[DATA.meta.parcial[String(parcial)].hasta_mes] : "");
+      destruirChart(S.canvas);
+      CHARTS[S.canvas] = new Chart(document.getElementById(S.canvas).getContext("2d"), {
+        type:"line",
+        data:{ labels:labels, datasets:[{ label:S.nombre, data:valores, spanGaps:false, borderColor:S.color, backgroundColor:S.fondo,
+                fill:true, tension:.25, pointRadius:5, pointBackgroundColor:colores }] },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){
+            return fmtNum(c.parsed.y) + (esParcial(c.label) ? " (año parcial: enero a " + MESES[DATA.meta.parcial[String(c.label)].hasta_mes] + ")" : "");
+          }}}},
+          layout:{ padding:{ top:34, right:18 } },
+          scales:{
+            x:{ ticks:{ callback:function(v){ var l = this.getLabelForValue(v); return esParcial(l) ? [String(l), "ene-" + MESES[DATA.meta.parcial[String(l)].hasta_mes].slice(0,3)] : String(l); } } },
+            y:{ beginAtZero:true, grace:"8%" }
+          }
+        },
+        plugins:[PLUGIN_ETIQUETAS]
+      });
     });
   }
 
@@ -1577,6 +1658,7 @@
     renderChartIntervenciones(agr);
     renderChartInstrumentos(lista);
     renderChartSerie();
+    renderChartsSerieIntervenciones();
     renderChartSexoEdad(lista);
     renderChartSustancia(lista);
     renderChartTopComunas();
