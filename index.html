@@ -69,7 +69,7 @@
   }
   .filtros-grid{
     display:grid;
-    grid-template-columns:repeat(6, minmax(120px,1fr));
+    grid-template-columns:repeat(7, minmax(110px,1fr));
     gap:10px;
     max-width:1400px;
     margin:0 auto;
@@ -147,6 +147,10 @@
   }
   .btn-png:hover{background:var(--acento);}
   .chart-canvas-wrap{position:relative;height:280px;}
+  .chart-card.principal{grid-column:1/-1;padding:20px 24px 14px;border-top:4px solid var(--acento);}
+  .chart-card.principal h3{font-size:18px;}
+  .chart-card.principal .chart-sub{font-size:12.5px;}
+  .chart-canvas-wrap.alto{height:400px;}
 
   #mapa{height:520px;border-radius:var(--radio);box-shadow:var(--sombra);overflow:hidden;}
   .mapa-leyenda{
@@ -207,7 +211,8 @@
 
   /* ---------- RESPONSIVE ---------- */
   @media (max-width:1000px){
-    .filtros-grid{grid-template-columns:repeat(3,1fr);}
+    .filtros-grid{grid-template-columns:repeat(4,1fr);}
+    .chart-canvas-wrap.alto{height:340px;}
     .kpi-grid{grid-template-columns:repeat(2,1fr);}
     .ficha-selector{grid-template-columns:1fr;}
   }
@@ -222,6 +227,8 @@
     .kpi-grid{grid-template-columns:repeat(2,1fr);}
     .kpi-card .kpi-valor{font-size:22px;}
     main{padding:12px;}
+    .chart-canvas-wrap.alto{height:280px;}
+    .chart-card.principal{padding:14px 14px 8px;}
     #mapa{height:380px;}
     .secciones-tabs{overflow-x:auto;flex-wrap:nowrap;}
     .tab-btn{padding:9px 12px;font-size:12.5px;}
@@ -244,6 +251,10 @@
     <div class="filtro-item">
       <label for="fAnio">Año</label>
       <select id="fAnio"></select>
+    </div>
+    <div class="filtro-item">
+      <label for="fInstr">Instrumento</label>
+      <select id="fInstr"><option value="">Todos</option></select>
     </div>
     <div class="filtro-item">
       <label for="fSS">Servicio de Salud</label>
@@ -287,6 +298,17 @@
   <!-- ===== VISTA GENERAL ===== -->
   <section class="vista activa" id="vistaGeneral">
     <div class="charts-grid">
+      <div class="chart-card principal">
+        <div class="chart-head">
+          <div>
+            <h3>Evolución de Tamizajes por Año</h3>
+            <p class="chart-sub" id="subChartSerie">Chile · todos los años disponibles</p>
+          </div>
+          <button class="btn-png" data-target="chartSerie">⬇ PNG</button>
+        </div>
+        <div class="chart-canvas-wrap alto"><canvas id="chartSerie"></canvas></div>
+      </div>
+
       <div class="chart-card">
         <div class="chart-head">
           <div>
@@ -330,17 +352,6 @@
           <button class="btn-png" data-target="chartIntervenciones">⬇ PNG</button>
         </div>
         <div class="chart-canvas-wrap"><canvas id="chartIntervenciones"></canvas></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-head">
-          <div>
-            <h3>Evolución de Tamizajes por Año</h3>
-            <p class="chart-sub" id="subChartSerie">Chile · todos los años disponibles</p>
-          </div>
-          <button class="btn-png" data-target="chartSerie">⬇ PNG</button>
-        </div>
-        <div class="chart-canvas-wrap"><canvas id="chartSerie"></canvas></div>
       </div>
 
       <div class="chart-card">
@@ -487,7 +498,7 @@
 
   var estado = {
     anio: null,
-    ss: "", comuna: "", estab: "", tipo: "", dependencia: ""
+    ss: "", comuna: "", estab: "", tipo: "", dependencia: "", instr: ""
   };
 
   /* ---------------------------- utilidades ------------------------------ */
@@ -641,6 +652,17 @@
     if (badge) badge.textContent = anios.length > 1 ? "Años: " + anios.join(" · ") : String(anios[0]);
   }
 
+  var ORDEN_INSTR = ["AUDIT","ASSIST","CRAFFT","ASSIST/CRAFFT"];
+  function etiquetaInstr(i){ return i === "ASSIST/CRAFFT" ? "ASSIST/CRAFFT (registro conjunto)" : i; }
+  function inicializarFiltroInstr(){
+    var presentes = {};
+    Object.keys(DATA.series || {}).forEach(function(sid){ var m = DATA.series[sid]; if (m.g === "tam" && m.instr) presentes[m.instr] = 1; });
+    var sel = document.getElementById("fInstr");
+    ORDEN_INSTR.filter(function(i){ return presentes[i]; }).forEach(function(i){
+      var o = document.createElement("option"); o.value = i; o.textContent = etiquetaInstr(i); sel.appendChild(o);
+    });
+  }
+
   // devuelve la lista de establecimientos que cumplen los filtros EXCLUYENDO
   // el propio filtro "campo" (para poblar sus opciones en cascada sin
   // auto-restringirse)
@@ -703,12 +725,13 @@
     return establecimientosFiltrados(null);
   }
 
-  function contextoTexto(sinAnio){
+  function contextoTexto(sinAnio, sinInstr){
     var lk = DATA.lookups;
     var partes = [];
     partes.push(estado.estab ? ESTAB_POR_ID[estado.estab].nombre :
                 estado.comuna !== "" ? lk.comunas[estado.comuna] :
                 estado.ss !== "" ? lk.ss[estado.ss] : "Chile");
+    if (estado.instr !== "" && !sinInstr) partes.push(etiquetaInstr(estado.instr));
     if (estado.tipo !== "") partes.push(lk.tipoCorto[estado.tipo]);
     if (estado.dependencia !== "") partes.push(lk.dependencia[estado.dependencia]);
     if (!sinAnio) partes.push("Año " + etiquetaAnio(estado.anio));
@@ -736,13 +759,29 @@
     return 0;
   }
 
+  function NOTA_TODOS(){ return estado.instr !== "" ? " · todos los instrumentos (el REM no separa resultados ni intervenciones por instrumento)" : ""; }
+  function infoSerie(sid){ return (DATA.series && DATA.series[sid]) || {nombre:sid, instr:""}; }
+  // ¿la serie de tamizaje cuenta bajo el filtro de instrumento activo?
+  function serieIncluida(sid){ return estado.instr === "" || infoSerie(sid).instr === estado.instr; }
+  var _SERIES_ANIO = {};
+  function seriesDelAnio(anio){
+    var k = String(anio);
+    if (_SERIES_ANIO[k]) return _SERIES_ANIO[k];
+    var da = datosAnio(anio), set = {};
+    if (da && da.tamizajes) Object.keys(da.tamizajes).forEach(function(id){ Object.keys(da.tamizajes[id]).forEach(function(sid){ set[sid] = 1; }); });
+    return (_SERIES_ANIO[k] = Object.keys(set));
+  }
+  function anioTieneInstrumento(anio){
+    return estado.instr === "" || seriesDelAnio(anio).some(serieIncluida);
+  }
+
   function totalTamizajesEstab(estId, anio){
     var da = datosAnio(anio);
     if (!da || !da.tamizajes) return 0;
     var reg = da.tamizajes[String(estId)];
     if (!reg) return 0;
     var total = 0;
-    Object.keys(reg).forEach(function(instr){ total += valorTotal(reg[instr]); });
+    Object.keys(reg).forEach(function(sid){ if (serieIncluida(sid)) total += valorTotal(reg[sid]); });
     return total;
   }
 
@@ -804,10 +843,10 @@
     var totalIntervenciones = agr.intervenciones.minimas + agr.intervenciones.breves + agr.intervenciones.referencias;
 
     var kpis = [
-      {label:"Tamizajes aplicados", valor:fmtNum(agr.tamizajesTotal), sub:"Total instrumentos, año "+estado.anio, clase:""},
-      {label:"Resultados en riesgo", valor:fmtPct(pctRiesgo), sub:"Consumo riesgoso + perjudicial/dependencia", clase:"rojo"},
-      {label:"Intervenciones realizadas", valor:fmtNum(totalIntervenciones), sub:"Mínimas + breves + referencias asistidas", clase:"acento"},
-      {label:"Referencias asistidas", valor:fmtNum(agr.intervenciones.referencias), sub:"Derivación a tratamiento especializado", clase:"rojo"},
+      {label:"Tamizajes aplicados", valor:fmtNum(agr.tamizajesTotal), sub:(estado.instr ? etiquetaInstr(estado.instr) : "Total instrumentos")+", año "+estado.anio, clase:""},
+      {label:"Resultados en riesgo", valor:fmtPct(pctRiesgo), sub:"Consumo riesgoso + perjudicial/dependencia"+(estado.instr ? " · todos los instrumentos" : ""), clase:"rojo"},
+      {label:"Intervenciones realizadas", valor:fmtNum(totalIntervenciones), sub:"Mínimas + breves + referencias asistidas"+(estado.instr ? " · todos los instrumentos" : ""), clase:"acento"},
+      {label:"Referencias asistidas", valor:fmtNum(agr.intervenciones.referencias), sub:"Derivación a tratamiento especializado"+(estado.instr ? " · todos los instrumentos" : ""), clase:"rojo"},
       {label:"Establecimientos con datos", valor:fmtNum(agr.nEstablecimientos), sub:"Con tamizajes en el año, dentro del filtro activo", clase:"verde"}
     ];
 
@@ -874,7 +913,7 @@
       tituloNivel = "por Servicio de Salud";
     }
 
-    document.getElementById("tituloChartDrill").textContent = "Tamizajes aplicados (total de instrumentos) " + tituloNivel;
+    document.getElementById("tituloChartDrill").textContent = (estado.instr ? "Tamizajes " + etiquetaInstr(estado.instr) + " aplicados " : "Tamizajes aplicados (total de instrumentos) ") + tituloNivel;
     document.getElementById("subChartDrill").textContent = contextoTexto();
 
     destruirChart("chartDrill");
@@ -892,7 +931,7 @@
   }
 
   function renderChartResultados(agr){
-    document.getElementById("subChartResultados").textContent = contextoTexto();
+    document.getElementById("subChartResultados").textContent = contextoTexto(false, true) + NOTA_TODOS();
     destruirChart("chartResultados");
     var ctx = document.getElementById("chartResultados").getContext("2d");
     CHARTS.chartResultados = new Chart(ctx, {
@@ -913,7 +952,7 @@
   }
 
   function renderChartIntervenciones(agr){
-    document.getElementById("subChartIntervenciones").textContent = contextoTexto();
+    document.getElementById("subChartIntervenciones").textContent = contextoTexto(false, true) + NOTA_TODOS();
     destruirChart("chartIntervenciones");
     var ctx = document.getElementById("chartIntervenciones").getContext("2d");
     CHARTS.chartIntervenciones = new Chart(ctx, {
@@ -956,6 +995,7 @@
         if (!reg) return;
         Object.keys(reg).forEach(function(sid){
           var v = reg[sid];
+          if (!serieIncluida(sid)) return;
           if (v && v.edad){
             disponible = true;
             RANGOS_EDAD.forEach(function(r){ edad[r] += v.edad[r] || 0; });
@@ -1053,7 +1093,7 @@
     lista.forEach(function(e){
       var reg = da.tamizajes[e.id];
       if (!reg) return;
-      Object.keys(reg).forEach(function(sid){ tot[sid] = (tot[sid] || 0) + valorTotal(reg[sid]); });
+      Object.keys(reg).forEach(function(sid){ if (serieIncluida(sid)) tot[sid] = (tot[sid] || 0) + valorTotal(reg[sid]); });
     });
     return tot;
   }
@@ -1119,7 +1159,7 @@
       subEl.textContent = "La apertura por sustancia está disponible desde 2016 (REM A27). Año " + estado.anio + ": solo tipo de intervención.";
       return;
     }
-    subEl.textContent = contextoTexto() + " · % dentro de cada tipo";
+    subEl.textContent = contextoTexto(false, true) + " · % dentro de cada tipo" + NOTA_TODOS();
     var totTipo = TIPOS_INT.map(function(t){
       var d = res.datos[t[0]]; return d.alcohol + d.tabaco + d.drogas;
     });
@@ -1159,7 +1199,7 @@
     var arr = Object.keys(g).map(function(k){ return {label:lk.comunas[k], valor:g[k]}; })
       .filter(function(x){ return x.valor > 0; })
       .sort(function(a, b){ return b.valor - a.valor; }).slice(0, 20);
-    document.getElementById("subChartTopComunas").textContent = contextoTexto() + " · total de instrumentos";
+    document.getElementById("subChartTopComunas").textContent = contextoTexto() + (estado.instr ? "" : " · total de instrumentos");
     destruirChart("chartTopComunas");
     if (!arr.length){ limpiarCanvas("chartTopComunas"); return; }
     var ctx = document.getElementById("chartTopComunas").getContext("2d");
@@ -1185,14 +1225,16 @@
     for (var a = desde; a <= hasta; a++){
       labels.push(a);
       if (anios.indexOf(a) < 0){ valores.push(null); colores.push(COLORES.acento); continue; }
+      if (!anioTieneInstrumento(a)){ valores.push(null); colores.push(COLORES.acento); continue; }
       var total = 0;
       lista.forEach(function(e){ total += totalTamizajesEstab(e.id, a); });
       valores.push(total);
       colores.push(esParcial(a) ? COLORES.ambar : COLORES.acento);
     }
     var sinCargar = labels.length - anios.length;
-    document.getElementById("subChartSerie").textContent = contextoTexto(true) + " · total de instrumentos" +
-      (sinCargar > 0 ? " · años sin datos cargados aún: se muestran como corte" : "");
+    document.getElementById("subChartSerie").textContent = contextoTexto(true) + (estado.instr ? "" : " · total de instrumentos") +
+      (sinCargar > 0 ? " · años sin datos cargados aún: se muestran como corte" : "") +
+      (estado.instr ? " · los años en que el REM no registra este instrumento quedan en blanco" : "");
     destruirChart("chartSerie");
     var ctx = document.getElementById("chartSerie").getContext("2d");
     CHARTS.chartSerie = new Chart(ctx, {
@@ -1200,7 +1242,7 @@
       data:{
         labels: labels,
         datasets:[{
-          label:"Tamizajes totales", data: valores, spanGaps:false,
+          label:(estado.instr ? "Tamizajes " + etiquetaInstr(estado.instr) : "Tamizajes totales"), data: valores, spanGaps:false,
           borderColor: COLORES.acento, backgroundColor: "rgba(107,45,138,0.12)",
           fill:true, tension:.25, pointRadius:5, pointBackgroundColor: colores
         }]
@@ -1492,6 +1534,7 @@
 
   function renderTodo(){
     actualizarCascada();
+    document.getElementById("fInstr").value = estado.instr;
     document.getElementById("chipContexto").textContent = "Mostrando: " + contextoTexto();
 
     var lista = establecimientosActivos();
@@ -1517,6 +1560,7 @@
 
   function bindEventos(){
     document.getElementById("fAnio").addEventListener("change", function(e){ estado.anio = e.target.value; renderTodo(); });
+    document.getElementById("fInstr").addEventListener("change", function(e){ estado.instr = e.target.value; renderTodo(); });
     document.getElementById("fSS").addEventListener("change", function(e){ estado.ss = e.target.value; estado.comuna=""; estado.estab=""; renderTodo(); });
     document.getElementById("fComuna").addEventListener("change", function(e){ estado.comuna = e.target.value; estado.estab=""; renderTodo(); });
     document.getElementById("fEstab").addEventListener("change", function(e){ estado.estab = e.target.value; renderTodo(); });
@@ -1524,7 +1568,7 @@
     document.getElementById("fDependencia").addEventListener("change", function(e){ estado.dependencia = e.target.value; renderTodo(); });
 
     document.getElementById("btnReset").addEventListener("click", function(){
-      estado.ss=""; estado.comuna=""; estado.estab=""; estado.tipo=""; estado.dependencia="";
+      estado.ss=""; estado.comuna=""; estado.estab=""; estado.tipo=""; estado.dependencia=""; estado.instr="";
       renderTodo();
     });
 
@@ -1567,6 +1611,7 @@
   document.addEventListener("DOMContentLoaded", function(){
     cargarDatos().then(function(){
       inicializarFiltroAnio();
+      inicializarFiltroInstr();
       document.getElementById("footerFecha").textContent = DATA.meta && DATA.meta.actualizado ? DATA.meta.actualizado : hoyISO();
       bindEventos();
       renderTodo();
